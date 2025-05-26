@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  random-pic-service:
+    image: zhouwl/my-random-pic:latest
+
+    container_name: my_random_pic
+
+    ports:
+      - "17777:17777"
+
+    volumes:
+      - ./image_urls.txt:/app/image_urls.txt:ro
+
+    restart: unless-stopped
