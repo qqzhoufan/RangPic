@@ -12,11 +12,11 @@
 
 ## 3.手动创建图片列表txt文件
 
-``nano /opt/randompic/image_urls.txt``
+``nano image_urls.txt``
 
 ## 4.之后使用命令，验证创建的image_urls.txt是个文件
 
-``ls -l /opt/randompic/image_urls.txt``
+``ls -l image_urls.txt``
 
 ## 5.将自己的图片链接填入image_urls.txt中，一行一条链接即可
 
@@ -30,5 +30,9 @@ https://blogsky.zhouwl.com/i/2025/05/26/6834791e5e06d.webp
 
 ``docker compose up -d``
 
-# 7.默认17777端口，需要的可以自行修改文件中的端口
+## 7.默认17777端口，需要的可以自行修改文件中的端口
 
+## 8.访问ip:端口号/random-image 即可生效,也可以通过域名解析
+
+示例
+``https://pic.19961216.xyz/random-image``
