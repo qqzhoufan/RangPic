@@ -1,127 +1,80 @@
-# RangPic - 全功能随机图片服务
+# RangPic - 随机图片服务
 
-这是一个功能强大的随机图片服务应用，基于 Go 和 PostgreSQL 构建，并使用 Docker Compose 进行容器化部署。
+RangPic 是一个基于 Go 语言开发的随机图片服务，支持从本地文件或外部 URL 管理图片，并提供按标签过滤的随机图片 API。它还包含一个简单的管理后台，方便用户上传、编辑和管理图片。
 
-它不仅能提供随机图片，还拥有一个完整的网页管理后台，让您可以轻松管理您的图片库。
+## 功能特性
 
-## ✨ 功能列表
+*   **随机图片 API**: 提供 `/random-image` 和 `/api/random-image` 接口，用于获取随机图片。
+*   **标签过滤**: 支持通过 `?tags=` 参数进行标签过滤，实现按需获取特定类型的图片（例如 `?tags=mobile`）。标签匹配现在支持**不区分大小写**和**子字符串匹配**。
+*   **本地图片管理**: 支持将图片下载到本地并作为本地素材进行管理。
+*   **管理后台**: 
+    *   用户认证登录。
+    *   图片列表展示、添加、编辑和删除。
+    *   本地素材库管理（上传、重命名、删除本地文件）。
+    *   从 `image_urls.txt` 自动导入图片数据到 PostgreSQL。
+*   **Docker 支持**: 提供 `Dockerfile` 和 `docker-compose.yaml` 方便部署。
 
-- **强大的图片分类**：每张图片都可以被指定为“电脑端”或“手机端”，并可以附加任意多个自定义标签。
-- **互动式前端页面**：提供一个美观的前端页面，用户可以方便地获取电脑或手机壁纸，并可根据标签进一步筛选。
-- **功能完善的 API**：
-  - 获取随机图片（可按标签筛选）。
-  - 获取随机图片的 JSON 信息（可按标签筛选）。
-  - 获取所有可用标签的列表。
-- **全功能网页后台**：提供一个密码保护的后台管理面板，您可以在网页上轻松地对图片进行增、删、改、查操作。
-- **本地素材库管理**：除了管理外部图片链接，还可以在后台上传、下载、重命名和删除服务器上的本地图片文件，并一键将其发布到图库中。
-- **数据库驱动**：使用强大的 PostgreSQL 数据库来管理所有图片数据。
-- **一键部署**：使用 Docker Compose，一条命令即可启动整个应用（Go 服务 + PostgreSQL 数据库）。
-- **自动数据迁移**：首次启动时，会自动将旧的 `image_urls.txt` 文件中的数据迁移到数据库中。
+## 技术栈
 
-## 🚀 快速开始
+*   **后端**: Go
+*   **数据库**: PostgreSQL
+*   **Web 框架**: Go 标准库 `net/http`
+*   **前端**: HTML, CSS, JavaScript (用于管理后台)
 
-### 准备工作
+## 安装与部署
 
-- 确保您的系统已经安装了 [Docker](https://www.docker.com/) 和 [Docker Compose](https://docs.docker.com/compose/install/)。
-  ```
-  curl -L -o docker-compose.yaml https://raw.githubusercontent.com/qqzhoufan/RangPic/master/docker-compose.yaml 
-### 安装与配置
+### 使用 Docker (推荐)
 
-1.  **克隆或下载项目**
-    将项目文件下载到您的服务器上。
-
-2.  **配置管理员密码**
-    打开 `docker-compose.yaml` 文件，找到 `environment` 部分，修改管理员的默认密码：
-
-    ```yaml
-    services:
-      random-pic-service:
-        # ...
-        environment:
-          # ...
-          - ADMIN_USERNAME=admin
-          - ADMIN_PASSWORD=changeme # <--- 在这里修改为您自己的强密码！
+1.  确保已安装 Docker 和 Docker Compose。
+2.  创建 `.env` 文件（与 `docker-compose.yaml` 同级），并添加以下内容：
     ```
-
-3.  **(可选) 准备初始数据**
-    如果您是首次使用，可以创建一个 `image_urls.txt` 文件，并按以下格式填入初始图片链接。应用在第一次启动时会自动将它们导入数据库。
-
-    格式：`图片URL,类型,标签1,标签2,...`
-    例如：
+    DATABASE_URL=postgresql://user:password@db:5432/rangpic?sslmode=disable
+    ADMIN_USERNAME=admin
+    ADMIN_PASSWORD=your_admin_password
     ```
-    https://example.com/desktop.png,desktop,nature,sky
-    https://example.com/mobile.png,mobile,cat,cute
-    ```
-    **注意**：这个文件只在数据库为空的第一次启动时使用。之后所有管理都应在网页后台进行。
-
-4.  **启动应用**
-    在项目根目录，运行以下命令：
-
+    请替换 `user`, `password`, `your_admin_password` 为您自己的值。
+3.  运行 Docker Compose 启动服务：
     ```bash
     docker-compose up --build -d
     ```
-    该命令会构建应用镜像，并以后台模式启动 Go 应用和数据库服务。
+4.  服务将在 `http://localhost:17777` 运行。
 
-## 📖 使用指南
+### 手动安装 (Go)
 
-应用启动后，默认监听 `17777` 端口。
+1.  确保已安装 Go (1.18+)。
+2.  安装 PostgreSQL 数据库并创建名为 `rangpic` 的数据库。
+3.  设置环境变量：
+    ```bash
+    export DATABASE_URL="postgresql://your_user:your_password@localhost:5432/rangpic?sslmode=disable"
+    export ADMIN_USERNAME="admin"
+    export ADMIN_PASSWORD="your_admin_password"
+    ```
+    请替换为您的数据库连接信息和管理员凭据。
+4.  构建并运行应用程序：
+    ```bash
+    go build -o rangpic ./cmd/rangpic
+    ./rangpic
+    ```
+5.  服务将在 `http://localhost:17777` 运行。
 
-- **前端主页**
-  访问 `http://<您的IP>:17777/`
-  在这里您可以随机获取电脑或手机壁纸，并进行标签筛选。
+## 使用指南
 
-- **后台管理面板**
-  访问 `http://<您的IP>:17777/admin`
-  使用您在 `docker-compose.yaml` 中设置的用户名和密码登录。在这里您可以管理整个图库。
+### 随机图片 API
 
-### 🗂️ 本地素材库
+*   `GET /random-image`: 获取一张随机图片，直接重定向到图片 URL。
+*   `GET /api/random-image`: 获取一张随机图片的 JSON 数据（包含 ID, URL, Tags）。
+*   `GET /random-image?tags=mobile`: 获取一张包含 "mobile" 标签的随机图片。
+*   `GET /api/random-image?tags=desktop,nature`: 获取一张同时包含 "desktop" 和 "nature" 标签的随机图片 JSON 数据。
 
-除了管理数据库中的图片条目，后台还提供了一个本地素材库，方便您直接管理服务器上的图片文件。
+### 管理后台
 
-1.  **访问**: 在后台管理面板，点击顶部的“本地素材库”链接，或直接访问 `http://<您的IP>:17777/admin/local_files`。
-2.  **功能**:
-    *   **查看和预览**: 列表形式展示所有在服务器 `local_images` 目录下的图片文件。
-    *   **从URL下载**: 输入一个网络图片的URL，服务会自动将其下载到本地素材库中。
-    *   **重命名**: 直接在列表中修改文件名。
-    *   **删除**: 从服务器上永久删除图片文件。
-    *   **一键发布**: 点击“发布到图库”，会将该本地图片作为一个新的条目添加到主图库中，其URL会自动设置为 `/local/文件名` 的格式。
+*   访问 `http://localhost:17777/admin`。
+*   使用 `.env` 文件中设置的 `ADMIN_USERNAME` 和 `ADMIN_PASSWORD` 登录。
+*   在后台可以管理图片、添加新图片、编辑现有图片、删除图片，以及管理本地素材库。
 
-## 📚 API 接口文档
+## 管理后台功能概览
 
-### 1. 获取随机图片（直接返回图片）
-
-- **路径**: `/random-image`
-- **方法**: `GET`
-- **说明**: 直接返回一张随机选择的图片。浏览器会直接显示该图片。
-- **查询参数**:
-  - `tag` (可选): 指定一个标签，用于从该分类下随机获取图片。
-- **示例**:
-  - `http://<您的IP>:17777/random-image` (完全随机)
-  - `http://<您的IP>:17777/random-image?tag=desktop` (随机获取电脑壁纸)
-  - `http://<您的IP>:17777/random-image?tag=cat` (随机获取`cat`标签的图片)
-
-### 2. 获取随机图片的 JSON 信息
-
-- **路径**: `/api/random-image`
-- **方法**: `GET`
-- **说明**: 返回一张随机选择的图片的详细信息（ID, URL, Tags）。
-- **查询参数**:
-  - `tag` (可选): 指定标签进行筛选。
-- **成功返回 (200 OK)**:
-  ```json
-  {
-    "id": 42,
-    "url": "https://example.com/some-image.png",
-    "tags": ["desktop", "nature"]
-  }
-  ```
-
-### 3. 获取所有可用标签列表
-
-- **路径**: `/api/tags`
-- **方法**: `GET`
-- **说明**: 返回数据库中所有不重复的标签列表。
-- **成功返回 (200 OK)**:
-  ```json
-  ["cat", "cute", "desktop", "mobile", "nature", "sky"]
-  ```
+*   **登录**: 通过 `/admin/login` 页面进行认证。
+*   **仪表盘**: `/admin` 页面显示所有已添加的图片列表。
+*   **添加/编辑图片**: 通过 `/admin/add` 和 `/admin/edit?id=<ID>` 页面管理图片信息和标签。
+*   **本地素材库**: `/admin/local_files` 页面允许您从 URL 下载图片到本地，并管理这些本地文件。
