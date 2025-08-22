@@ -3,7 +3,7 @@ version: '3.8'
 services:
   random-pic-service:
     # build: . # 从当前目录的 Dockerfile 构建
-    image: my_random_pic_image:latest  # 使用预构建的镜像
+    image: zhouwl/my_random_pic_image:latest  # 使用预构建的镜像
     container_name: my_random_pic
     ports:
       - "17777:17777"
