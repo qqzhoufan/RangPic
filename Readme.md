@@ -24,8 +24,7 @@
 
 - 确保您的系统已经安装了 [Docker](https://www.docker.com/) 和 [Docker Compose](https://docs.docker.com/compose/install/)。
   ```
-  wget https://github.com/qqzhoufan/RangPic/blob/master/docker-compose.yaml
-
+  curl -L -o docker-compose.yaml https://raw.githubusercontent.com/qqzhoufan/RangPic/master/docker-compose.yaml 
 ### 安装与配置
 
 1.  **克隆或下载项目**
