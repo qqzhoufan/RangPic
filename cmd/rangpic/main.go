@@ -184,7 +184,8 @@ func chooseRandomImage(ctx context.Context, tagQuery string) (Image, error) {
 		query := `SELECT id, url, tags FROM images ORDER BY RANDOM() LIMIT 1`
 		err = dbpool.QueryRow(ctx, query).Scan(&img.ID, &img.URL, &img.Tags)
 	} else {
-		query := `SELECT id, url, tags FROM images WHERE tags @> ARRAY[$1] ORDER BY RANDOM() LIMIT 1`
+		// Use EXISTS with unnest and LOWER for case-insensitive substring matching within the tags array
+		query := `SELECT id, url, tags FROM images WHERE EXISTS (SELECT 1 FROM unnest(tags) AS t WHERE LOWER(t) LIKE LOWER('%' || $1 || '%')) ORDER BY RANDOM() LIMIT 1`
 		err = dbpool.QueryRow(ctx, query, tagQuery).Scan(&img.ID, &img.URL, &img.Tags)
 	}
 	if err != nil {
@@ -197,7 +198,7 @@ func chooseRandomImage(ctx context.Context, tagQuery string) (Image, error) {
 }
 
 func randomImageAPIHandler(w http.ResponseWriter, r *http.Request) {
-	tagQuery := r.URL.Query().Get("tag")
+	tagQuery := r.URL.Query().Get("tags")
 	img, err := chooseRandomImage(r.Context(), tagQuery)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
@@ -210,7 +211,7 @@ func randomImageAPIHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func randomImageProxyHandler(w http.ResponseWriter, r *http.Request) {
-	tagQuery := r.URL.Query().Get("tag")
+	tagQuery := r.URL.Query().Get("tags")
 	img, err := chooseRandomImage(r.Context(), tagQuery)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
