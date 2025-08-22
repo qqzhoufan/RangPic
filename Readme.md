@@ -23,6 +23,9 @@
 ### 准备工作
 
 - 确保您的系统已经安装了 [Docker](https://www.docker.com/) 和 [Docker Compose](https://docs.docker.com/compose/install/)。
+  ```
+  curl -L -o docker-compose.yaml https://raw.githubusercontent.com/qqzhoufan/RangPic/main/docker-compose.yaml 
+
 
 ### 安装与配置
 
