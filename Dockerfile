@@ -7,7 +7,7 @@ COPY go.sum ./
 
 RUN go mod download
 
-COPY *.go ./
+COPY cmd/rangpic/*.go ./
 
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o /app/random-image-server .
 
@@ -17,8 +17,10 @@ WORKDIR /app
 
 COPY --from=builder /app/random-image-server /app/random-image-server
 
-COPY image_urls.txt /app/image_urls.txt
-COPY templates /app/templates
+COPY web/static/index.html /app/index.html
+
+COPY data/image_urls.txt /app/image_urls.txt
+
 
 EXPOSE 17777
 

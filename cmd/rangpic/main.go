@@ -140,7 +140,7 @@ func initDB(ctx context.Context) error {
 		return nil
 	}
 
-	file, err := os.Open("image_urls.txt")
+	file, err := os.Open(filepath.Join("data", "image_urls.txt"))
 	if os.IsNotExist(err) {
 		return nil
 	}
@@ -251,7 +251,7 @@ func serveIndexPage(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	http.ServeFile(w, r, "index.html")
+	http.ServeFile(w, r, filepath.Join("web", "static", "index.html"))
 }
 
 func tagsAPIHandler(w http.ResponseWriter, r *http.Request) {
