@@ -25,19 +25,23 @@ RangPic 是一个基于 Go 语言开发的随机图片服务，支持从本地�
 
 ### 使用 Docker (推荐)
 
-1.  确保已安装 Docker 和 Docker Compose。
-2.  **直接修改 `docker-compose.yaml` 文件**，更新 `services.app.environment` 部分的以下变量：
+1.  下载 `docker-compose.yaml` 文件：
+    ```bash
+    curl -L -o docker-compose.yaml https://raw.githubusercontent.com/qqzhoufan/RangPic/master/docker-compose.yaml
+    ```
+2.  确保已安装 Docker 和 Docker Compose。
+3.  **直接修改 `docker-compose.yaml` 文件**，更新 `services.app.environment` 部分的以下变量：
     ```yaml
-          - DATABASE_URL=postgresql://your_db_user:your_db_password@db:5432/rangpic?sslmode=disable
           - ADMIN_USERNAME=your_admin_username # 默认为 admin
           - ADMIN_PASSWORD=your_admin_password # 默认为 adminpass
     ```
-    请替换 `your_db_user`, `your_db_password`, `your_admin_username`, `your_admin_password` 为您自己的值。
-3.  运行 Docker Compose 启动服务：
+    `DATABASE_URL` 通常无需修改，除非您需要自定义数据库连接信息。
+    请替换 `your_admin_username`, `your_admin_password` 为您自己的值。
+4.  运行 Docker Compose 启动服务：
     ```bash
     docker-compose up --build -d
     ```
-4.  服务将在 `http://localhost:17777` 运行。
+5.  服务将在 `http://localhost:17777` 运行。
 
 ### 手动安装 (Go)
 
