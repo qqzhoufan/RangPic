@@ -1,38 +1,113 @@
-## 1.切换到你想要的文件夹，比如/opt/randompic文件夹
+# RangPic - 全功能随机图片服务
 
-``cd /opt/randompic``
+这是一个功能强大的随机图片服务应用，基于 Go 和 PostgreSQL 构建，并使用 Docker Compose 进行容器化部署。
 
-没有这个文件夹可以使用创建
+它不仅能提供随机图片，还拥有一个完整的网页管理后台，让您可以轻松管理您的图片库。
 
-``mkdir /opt/randompic``
+## ✨ 功能列表
 
-## 2.下载docker-compose.yaml文件
+- **强大的图片分类**：每张图片都可以被指定为“电脑端”或“手机端”，并可以附加任意多个自定义标签。
+- **互动式前端页面**：提供一个美观的前端页面，用户可以方便地获取电脑或手机壁纸，并可根据标签进一步筛选。
+- **功能完善的 API**：
+  - 获取随机图片（可按标签筛选）。
+  - 获取随机图片的 JSON 信息（可按标签筛选）。
+  - 获取所有可用标签的列表。
+- **全功能网页后台**：提供一个密码保护的后台管理面板，您可以在网页上轻松地对图片进行增、删、改、查操作。
+- **数据库驱动**：使用强大的 PostgreSQL 数据库来管理所有图片数据。
+- **一键部署**：使用 Docker Compose，一条命令即可启动整个应用（Go 服务 + PostgreSQL 数据库）。
+- **自动数据迁移**：首次启动时，会自动将旧的 `image_urls.txt` 文件中的数据迁移到数据库中。
 
-``wget https://raw.githubusercontent.com/qqzhoufan/RangPic/master/docker-compose.yaml``
+## 🚀 快速开始
 
-## 3.手动创建图片列表txt文件
+### 准备工作
 
-``nano image_urls.txt``
+- 确保您的系统已经安装了 [Docker](https://www.docker.com/) 和 [Docker Compose](https://docs.docker.com/compose/install/)。
 
-## 4.之后使用命令，验证创建的image_urls.txt是个文件
+### 安装与配置
 
-``ls -l image_urls.txt``
+1.  **克隆或下载项目**
+    将项目文件下载到您的服务器上。
 
-## 5.将自己的图片链接填入image_urls.txt中，一行一条链接即可
+2.  **配置管理员密码**
+    打开 `docker-compose.yaml` 文件，找到 `environment` 部分，修改管理员的默认密码：
 
-比如
-```
-https://blogsky.zhouwl.com/i/2025/05/26/683479325d5ba.webp
-https://blogsky.zhouwl.com/i/2025/05/26/6834791e5e06d.webp
-```
+    ```yaml
+    services:
+      random-pic-service:
+        # ...
+        environment:
+          # ...
+          - ADMIN_USERNAME=admin
+          - ADMIN_PASSWORD=changeme # <--- 在这里修改为您自己的强密码！
+    ```
 
-## 6.使用命令开始构建
+3.  **(可选) 准备初始数据**
+    如果您是首次使用，可以创建一个 `image_urls.txt` 文件，并按以下格式填入初始图片链接。应用在第一次启动时会自动将它们导入数据库。
 
-``docker compose up -d``
+    格式：`图片URL,类型,标签1,标签2,...`
+    例如：
+    ```
+    https://example.com/desktop.png,desktop,nature,sky
+    https://example.com/mobile.png,mobile,cat,cute
+    ```
+    **注意**：这个文件只在数据库为空的第一次启动时使用。之后所有管理都应在网页后台进行。
 
-## 7.默认17777端口，需要的可以自行修改文件中的端口
+4.  **启动应用**
+    在项目根目录，运行以下命令：
 
-## 8.访问ip:端口号/random-image 即可生效,也可以通过域名解析
+    ```bash
+    docker-compose up --build -d
+    ```
+    该命令会构建应用镜像，并以后台模式启动 Go 应用和数据库服务。
 
-示例
-``https://pic.19961216.xyz/random-image``
+## 📖 使用指南
+
+应用启动后，默认监听 `17777` 端口。
+
+- **前端主页**
+  访问 `http://<您的IP>:17777/`
+  在这里您可以随机获取电脑或手机壁纸，并进行标签筛选。
+
+- **后台管理面板**
+  访问 `http://<您的IP>:17777/admin`
+  使用您在 `docker-compose.yaml` 中设置的用户名和密码登录。在这里您可以管理整个图库。
+
+## 📚 API 接口文档
+
+### 1. 获取随机图片（直接返回图片）
+
+- **路径**: `/random-image`
+- **方法**: `GET`
+- **说明**: 直接返回一张随机选择的图片。浏览器会直接显示该图片。
+- **查询参数**:
+  - `tag` (可选): 指定一个标签，用于从该分类下随机获取图片。
+- **示例**:
+  - `http://<您的IP>:17777/random-image` (完全随机)
+  - `http://<您的IP>:17777/random-image?tag=desktop` (随机获取电脑壁纸)
+  - `http://<您的IP>:17777/random-image?tag=cat` (随机获取`cat`标签的图片)
+
+### 2. 获取随机图片的 JSON 信息
+
+- **路径**: `/api/random-image`
+- **方法**: `GET`
+- **说明**: 返回一张随机选择的图片的详细信息（ID, URL, Tags）。
+- **查询参数**:
+  - `tag` (可选): 指定标签进行筛选。
+- **成功返回 (200 OK)**:
+  ```json
+  {
+    "id": 42,
+    "url": "https://example.com/some-image.png",
+    "tags": ["desktop", "nature"]
+  }
+  ```
+
+### 3. 获取所有可用标签列表
+
+- **路径**: `/api/tags`
+- **方法**: `GET`
+- **说明**: 返回数据库中所有不重复的标签列表。
+- **成功返回 (200 OK)**:
+  ```json
+  ["cat", "cute", "desktop", "mobile", "nature", "sky"]
+  ```

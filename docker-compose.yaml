@@ -2,14 +2,33 @@ version: '3.8'
 
 services:
   random-pic-service:
-    image: zhouwl/my-random-pic:latest
-
+    build: . # 从本地 Dockerfile 构建
     container_name: my_random_pic
-
     ports:
       - "17777:17777"
-
-    volumes:
-      - ./image_urls.txt:/app/image_urls.txt:ro
-
     restart: unless-stopped
+    depends_on:
+      - db
+    volumes:
+      - ./local_images:/app/local_images # 新增：映射本地图片存储目录
+    environment:
+      # 将数据库连接信息作为环境变量传递给 Go 应用
+      - DATABASE_URL=postgres://user:password@db:5432/random_pic_db?sslmode=disable
+      # 设置管理员账号信息
+      - ADMIN_USERNAME=admin
+      - ADMIN_PASSWORD=changeme
+
+  db:
+    image: postgres:13 # 使用 PostgreSQL 13 镜像
+    container_name: postgres_db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=random_pic_db
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data # 持久化数据库数据
+
+volumes:
+  postgres_data: # 定义一个卷来存储数据库数据
+  local_images:  # 定义一个卷来存储本地图片 (虽然我们用了绑定挂载，但定义一下是好习惯)

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>随机图片查看器</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; display: flex; justify-content: center; align-items: center; flex-direction: column; min-height: 100vh; margin: 0; background-color: #f0f2f5; color: #333; }
+        .container { text-align: center; background-color: #ffffff; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); max-width: 90%; }
+        #image-display { max-width: 100%; max-height: 60vh; border-radius: 4px; margin-bottom: 1rem; background-color: #eee; min-height: 200px; transition: opacity 0.3s; }
+        #tags-display { margin-bottom: 1.5rem; color: #555; min-height: 1.2em; }
+        .tag { display: inline-block; background-color: #e0e0e0; padding: 0.3em 0.8em; border-radius: 1em; font-size: 0.9em; margin: 0.2em; }
+        .button-group { display: flex; gap: 1rem; margin-bottom: 1rem; justify-content: center; flex-wrap: wrap; }
+        button { background-color: #007aff; color: white; border: none; padding: 0.8rem 1.5rem; font-size: 1rem; border-radius: 5px; cursor: pointer; transition: background-color 0.2s; }
+        button:hover { background-color: #0056b3; }
+        button:disabled { background-color: #cccccc; }
+        .secondary-controls { display: flex; gap: 1rem; align-items: center; }
+        select { padding: 0.5rem; border-radius: 5px; border: 1px solid #ccc; }
+        .loader { display: none; margin-bottom: 1.5rem; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>随机图片</h1>
+        <img id="image-display" src="" alt="随机图片" />
+        <div id="tags-display"></div>
+        <div class="loader">正在加载...</div>
+        <div class="button-group">
+            <button id="desktop-btn">来张电脑壁纸</button>
+            <button id="mobile-btn">来张手机壁纸</button>
+        </div>
+        <div class="secondary-controls">
+            <label for="tag-filter">或筛选其他标签:</label>
+            <select id="tag-filter">
+                <option value="">所有</option>
+            </select>
+        </div>
+    </div>
+
+    <script>
+        const imageDisplay = document.getElementById('image-display');
+        const tagsDisplay = document.getElementById('tags-display');
+        const desktopBtn = document.getElementById('desktop-btn');
+        const mobileBtn = document.getElementById('mobile-btn');
+        const tagFilter = document.getElementById('tag-filter');
+        const loader = document.querySelector('.loader');
+
+        let currentImageType = 'desktop'; // 默认请求电脑壁纸
+
+        async function fetchRandomImage() {
+            const allButtons = [desktopBtn, mobileBtn, tagFilter];
+            loader.style.display = 'block';
+            tagsDisplay.innerHTML = '';
+            allButtons.forEach(b => b.disabled = true);
+            imageDisplay.style.opacity = 0.5;
+
+            try {
+                let selectedTag = tagFilter.value;
+                // 如果下拉框没选，则使用当前主类型 (desktop/mobile)
+                if (!selectedTag) {
+                    selectedTag = currentImageType;
+                }
+
+                const response = await fetch(`/api/random-image?tag=${selectedTag}`);
+                if (!response.ok) { throw new Error(`HTTP 错误! 状态: ${response.status}`); }
+                const data = await response.json();
+
+                const tempImg = new Image();
+                tempImg.src = data.url;
+                tempImg.onload = () => {
+                    imageDisplay.src = data.url;
+                    imageDisplay.style.opacity = 1;
+                    displayTags(data.tags);
+                    loader.style.display = 'none';
+                    allButtons.forEach(b => b.disabled = false);
+                };
+                tempImg.onerror = () => { throw new Error('图片加载失败'); };
+
+            } catch (error) {
+                console.error('获取图片失败:', error);
+                tagsDisplay.innerHTML = `<span class="tag" style="background-color: #ffcccc;">${error.message}</span>`;
+                loader.style.display = 'none';
+                allButtons.forEach(b => b.disabled = false);
+                imageDisplay.style.opacity = 1;
+            }
+        }
+
+        function displayTags(tags) {
+            tagsDisplay.innerHTML = '';
+            if (tags && tags.length > 0) {
+                tags.forEach(tag => {
+                    const tagElement = document.createElement('span');
+                    tagElement.className = 'tag';
+                    tagElement.textContent = tag;
+                    tagsDisplay.appendChild(tagElement);
+                });
+            } else {
+                tagsDisplay.innerHTML = '<span class="tag">无标签</span>';
+            }
+        }
+
+        async function populateTagFilter() {
+            try {
+                const response = await fetch('/api/tags');
+                const tags = await response.json();
+                // 过滤掉 desktop 和 mobile，因为它们由主按钮控制
+                const otherTags = tags.filter(t => t !== 'desktop' && t !== 'mobile');
+                otherTags.forEach(tag => {
+                    const option = document.createElement('option');
+                    option.value = tag;
+                    option.textContent = tag;
+                    tagFilter.appendChild(option);
+                });
+            } catch (error) {
+                console.error('获取标签列表失败:', error);
+            }
+        }
+
+        desktopBtn.addEventListener('click', () => {
+            currentImageType = 'desktop';
+            tagFilter.value = ''; // 重置下拉框
+            fetchRandomImage();
+        });
+
+        mobileBtn.addEventListener('click', () => {
+            currentImageType = 'mobile';
+            tagFilter.value = ''; // 重置下拉框
+            fetchRandomImage();
+        });
+
+        tagFilter.addEventListener('change', fetchRandomImage);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            populateTagFilter();
+            fetchRandomImage(); // 页面加载时获取第一张电脑壁纸
+        });
+    </script>
+
+</body>
+</html>
