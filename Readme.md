@@ -11,7 +11,6 @@ RangPic 是一个基于 Go 语言开发的随机图片服务，支持从本地�
     *   用户认证登录。
     *   图片列表展示、添加、编辑和删除。
     *   本地素材库管理（上传、重命名、删除本地文件）。
-    *   从 `image_urls.txt` 自动导入图片数据到 PostgreSQL。
 *   **Docker 支持**: 提供 `Dockerfile` 和 `docker-compose.yaml` 方便部署。
 
 ## 技术栈
@@ -51,7 +50,7 @@ RangPic 是一个基于 Go 语言开发的随机图片服务，支持从本地�
     ```bash
     export DATABASE_URL="postgresql://your_user:your_password@localhost:5432/rangpic?sslmode=disable"
     export ADMIN_USERNAME="admin"
-    export ADMIN_PASSWORD="your_admin_password"
+    export ADMIN_PASSWORD="adminpass"
     ```
     请替换为您的数据库连接信息和管理员凭据。
 4.  构建并运行应用程序：
@@ -73,7 +72,7 @@ RangPic 是一个基于 Go 语言开发的随机图片服务，支持从本地�
 ### 管理后台
 
 *   访问 `http://localhost:17777/admin`。
-*   使用 `docker-compose.yaml` 中设置的 `ADMIN_USERNAME` 和 `ADMIN_PASSWORD` (或默认值) 登录。
+*   使用 `docker-compose.yaml` 中设置的 `ADMIN_USERNAME` (默认为 `admin`) 和 `ADMIN_PASSWORD` (默认为 `changeme`) 登录。
 *   在后台可以管理图片、添加新图片、编辑现有图片、删除图片，以及管理本地素材库。
 
 ## 管理后台功能概览
