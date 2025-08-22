@@ -18,6 +18,7 @@ WORKDIR /app
 COPY --from=builder /app/random-image-server /app/random-image-server
 
 COPY image_urls.txt /app/image_urls.txt
+COPY templates /app/templates
 
 EXPOSE 17777
 
