@@ -26,13 +26,13 @@ RangPic 是一个基于 Go 语言开发的随机图片服务，支持从本地�
 ### 使用 Docker (推荐)
 
 1.  确保已安装 Docker 和 Docker Compose。
-2.  创建 `.env` 文件（与 `docker-compose.yaml` 同级），并添加以下内容：
+2.  **直接修改 `docker-compose.yaml` 文件**，更新 `services.app.environment` 部分的以下变量：
+    ```yaml
+          - DATABASE_URL=postgresql://your_db_user:your_db_password@db:5432/rangpic?sslmode=disable
+          - ADMIN_USERNAME=your_admin_username # 默认为 admin
+          - ADMIN_PASSWORD=your_admin_password # 默认为 adminpass
     ```
-    DATABASE_URL=postgresql://user:password@db:5432/rangpic?sslmode=disable
-    ADMIN_USERNAME=admin
-    ADMIN_PASSWORD=your_admin_password
-    ```
-    请替换 `user`, `password`, `your_admin_password` 为您自己的值。
+    请替换 `your_db_user`, `your_db_password`, `your_admin_username`, `your_admin_password` 为您自己的值。
 3.  运行 Docker Compose 启动服务：
     ```bash
     docker-compose up --build -d
@@ -69,7 +69,7 @@ RangPic 是一个基于 Go 语言开发的随机图片服务，支持从本地�
 ### 管理后台
 
 *   访问 `http://localhost:17777/admin`。
-*   使用 `.env` 文件中设置的 `ADMIN_USERNAME` 和 `ADMIN_PASSWORD` 登录。
+*   使用 `docker-compose.yaml` 中设置的 `ADMIN_USERNAME` 和 `ADMIN_PASSWORD` (或默认值) 登录。
 *   在后台可以管理图片、添加新图片、编辑现有图片、删除图片，以及管理本地素材库。
 
 ## 管理后台功能概览
