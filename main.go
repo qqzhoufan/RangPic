@@ -41,6 +41,15 @@ type LocalFile struct {
 	ModTime time.Time
 }
 
+// PageData a struct to hold all the data for the templates
+type PageData struct {
+	Title        string
+	UserLoggedIn bool
+	Images       []Image
+	Data         interface{}
+	LocalFiles   []LocalFile
+}
+
 const localImagesPath = "/app/local_images"
 
 var (
@@ -309,7 +318,8 @@ func adminLoginHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	templates.ExecuteTemplate(w, "login.html", nil)
+	pageData := PageData{Title: "登录"}
+	templates.ExecuteTemplate(w, "login.html", pageData)
 }
 
 func adminLogoutHandler(w http.ResponseWriter, r *http.Request) {
@@ -344,7 +354,12 @@ func adminDashboardHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		images = append(images, img)
 	}
-	templates.ExecuteTemplate(w, "dashboard.html", images)
+	pageData := PageData{
+		Title:        "管理后台",
+		UserLoggedIn: true,
+		Images:       images,
+	}
+	templates.ExecuteTemplate(w, "dashboard.html", pageData)
 }
 
 func adminAddImageHandler(w http.ResponseWriter, r *http.Request) {
@@ -377,7 +392,12 @@ func adminAddImageHandler(w http.ResponseWriter, r *http.Request) {
 	localFile := r.URL.Query().Get("local_file")
 	img := Image{URL: "/local/" + localFile}
 
-	templates.ExecuteTemplate(w, "edit.html", EditPageData{Image: img})
+	pageData := PageData{
+		Title:        "添加图片",
+		UserLoggedIn: true,
+		Data:         EditPageData{Image: img},
+	}
+	templates.ExecuteTemplate(w, "edit.html", pageData)
 }
 
 func adminEditImageHandler(w http.ResponseWriter, r *http.Request) {
@@ -427,7 +447,12 @@ func adminEditImageHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	data.OtherTags = strings.Join(otherTags, ", ")
 
-	templates.ExecuteTemplate(w, "edit.html", data)
+	pageData := PageData{
+		Title:        "编辑图片",
+		UserLoggedIn: true,
+		Data:         data,
+	}
+	templates.ExecuteTemplate(w, "edit.html", pageData)
 }
 
 func adminDeleteImageHandler(w http.ResponseWriter, r *http.Request) {
@@ -462,7 +487,12 @@ func adminLocalFilesHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	templates.ExecuteTemplate(w, "local_files.html", localFiles)
+	pageData := PageData{
+		Title:        "本地素材库",
+		UserLoggedIn: true,
+		LocalFiles:   localFiles,
+	}
+	templates.ExecuteTemplate(w, "local_files.html", pageData)
 }
 
 func adminDownloadURLHandler(w http.ResponseWriter, r *http.Request) {
@@ -568,86 +598,6 @@ func parseTemplates() {
 	templates = template.New("").Funcs(template.FuncMap{
 		"join": strings.Join,
 	})
-	template.Must(templates.Parse(loginTemplate))
-	template.Must(templates.Parse(dashboardTemplate))
-	template.Must(templates.Parse(editTemplate))
-	template.Must(templates.Parse(localFilesTemplate))
+	template.Must(templates.ParseGlob("templates/*.html"))
 }
 
-const loginTemplate = `{{define "login.html"}}<!DOCTYPE html><html><head><title>登录</title><style>body{font-family: sans-serif;}</style></head><body>
-<h2>登录</h2><form method="post" action="/admin/login">
-  Username: <input type="text" name="username"><br><br>
-  Password: <input type="password" name="password"><br><br>
-  <button type="submit">登录</button>
-</form></body></html>{{end}}`
-
-const dashboardTemplate = `{{define "dashboard.html"}}<!DOCTYPE html><html><head><title>管理后台</title><style>body{font-family: sans-serif;} table,th,td{border: 1px solid black; border-collapse: collapse; padding: 5px;} a,button{margin-right: 10px;}</style></head><body>
-<h1>图片列表</h1>
-<p><a href="/admin/add">添加新图片</a> | <a href="/admin/local_files">本地素材库</a> | <a href="/admin/logout">登出</a></p>
-<table>
-  <tr><th>ID</th><th>URL</th><th>Tags</th><th>操作</th></tr>
-  {{range .}}
-  <tr>
-    <td>{{.ID}}</td>
-    <td><a href="{{.URL}}" target="_blank">{{.URL}}</a></td>
-    <td>{{join .Tags ", "}}</td>
-    <td>
-      <a href="/admin/edit?id={{.ID}}">编辑</a>
-      <form method="post" action="/admin/delete" style="display:inline;">
-        <input type="hidden" name="id" value="{{.ID}}">
-        <button type="submit" onclick="return confirm('确定删除吗？');">删除</button>
-      </form>
-    </td>
-  </tr>
-  {{end}}
-</table></body></html>{{end}}`
-
-const editTemplate = `{{define "edit.html"}}<!DOCTYPE html><html><head><title>{{if .Image.ID}}编辑{{else}}添加{{end}}图片</title><style>body{font-family: sans-serif;} input{width: 500px; margin-bottom: 10px;}</style></head><body>
-<h1>{{if .Image.ID}}编辑图片 ID: {{.Image.ID}}{{else}}添加新图片{{end}}</h1>
-<form method="post">
-  <p><strong>URL:</strong><br>
-    <input type="text" name="url" value="{{.Image.URL}}">
-  </p>
-  <p><strong>类型:</strong><br>
-    <label><input type="radio" name="image_type" value="desktop" {{if .IsDesktop}}checked{{end}}> 电脑端</label>
-    <label><input type="radio" name="image_type" value="mobile" {{if .IsMobile}}checked{{end}}> 手机端</label>
-  </p>
-  <p><strong>其他标签 (逗号分隔):</strong><br>
-    <input type="text" name="other_tags" value="{{.OtherTags}}">
-  </p>
-  <button type="submit">保存</button>
-</form>
-<p><a href="/admin">返回列表</a></p></body></html>{{end}}`
-
-const localFilesTemplate = `{{define "local_files.html"}}<!DOCTYPE html><html><head><title>本地素材库</title><style>body{font-family: sans-serif;} table,th,td{border: 1px solid black; border-collapse: collapse; padding: 5px;} a,button{margin-right: 10px;}</style></head><body>
-<h1>本地素材库</h1>
-<p><a href="/admin">返回图片列表</a></p>
-<h2>从 URL 下载新素材</h2>
-<form method="post" action="/admin/download">
-  <input type="text" name="url" size="100" placeholder="输入图片 URL">
-  <button type="submit">下载</button>
-</form>
-<h2>已下载素材 ({{len .}})</h2>
-<table>
-  <tr><th>预览</th><th>文件名</th><th>修改时间</th><th>操作</th></tr>
-  {{range .}}
-  <tr>
-    <td><a href="/local/{{.Name}}" target="_blank"><img src="/local/{{.Name}}" alt="{{.Name}}" height="50"></a></td>
-    <td>
-      <form method="post" action="/admin/rename_file" style="display:inline;">
-        <input type="hidden" name="old_name" value="{{.Name}}">
-        <input type="text" name="new_name" value="{{.Name}}">
-        <button type="submit">重命名</button>
-      </form>
-    </td>
-    <td>{{.ModTime.Format "2006-01-02 15:04:05"}}</td>
-    <td>
-      <a href="/admin/add?local_file={{.Name}}">发布到图库</a>
-      <form method="post" action="/admin/delete_file" style="display:inline;">
-        <input type="hidden" name="file_name" value="{{.Name}}">
-        <button type="submit" onclick="return confirm('确定删除这个本地文件吗？');">删除</button>
-      </form>
-    </td>
-  </tr>
-  {{end}}
-</table></body></html>{{end}}`

@@ -1,0 +1,59 @@
+{{define "local_files.html"}}
+{{template "layout.html" .}}
+{{define "content"}}
+<header>
+    <h1>本地素材库</h1>
+    <p>管理服务器上 `local_images` 目录中的文件。</p>
+</header>
+
+<article>
+    <h2>从 URL 下载新素材</h2>
+    <form method="post" action="/admin/download" class="grid">
+        <input type="url" name="url" placeholder="输入图片 URL" required>
+        <button type="submit">下载</button>
+    </form>
+</article>
+
+<article>
+    <h2>已下载素材 ({{len .localFiles}})</h2>
+    <figure>
+        <table role="grid">
+            <thead>
+                <tr>
+                    <th>预览</th>
+                    <th>文件名 (可修改)</th>
+                    <th>修改时间</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{range .localFiles}}
+                <tr>
+                    <td><a href="/local/{{.Name}}" target="_blank"><img src="/local/{{.Name}}" alt="{{.Name}}" class="preview-img"></a></td>
+                    <td>
+                        <form method="post" action="/admin/rename_file">
+                            <input type="hidden" name="old_name" value="{{.Name}}">
+                            <input type="text" name="new_name" value="{{.Name}}" required>
+                            <button type="submit" class="outline">重命名</button>
+                        </form>
+                    </td>
+                    <td>{{.ModTime.Format "2006-01-02 15:04:05"}}</td>
+                    <td>
+                        <a href="/admin/add?local_file={{.Name}}" role="button" class="outline">发布到图库</a>
+                        <form method="post" action="/admin/delete_file" style="display:inline;">
+                            <input type="hidden" name="file_name" value="{{.Name}}">
+                            <button type="submit" class="secondary" onclick="return confirm('确定删除这个本地文件吗？');">删除</button>
+                        </form>
+                    </td>
+                </tr>
+                {{else}}
+                <tr>
+                    <td colspan="4" style="text-align: center;">素材库是空的。你可以通过上面的表单从URL下载新素材。</td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+    </figure>
+</article>
+{{end}}
+{{end}}

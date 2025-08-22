@@ -1,0 +1,32 @@
+{{define "edit.html"}}
+{{template "layout.html" .}}
+{{define "content"}}
+<header>
+    <h1>{{if .data.Image.ID}}编辑图片 ID: {{.data.Image.ID}}{{else}}添加新图片{{end}}</h1>
+</header>
+<article>
+    <form method="post">
+        <label for="url">URL</label>
+        <input type="text" id="url" name="url" value="{{.data.Image.URL}}" placeholder="https://example.com/image.png" required>
+
+        <fieldset>
+            <legend>类型</legend>
+            <label for="desktop">
+                <input type="radio" id="desktop" name="image_type" value="desktop" {{if .data.IsDesktop}}checked{{end}}>
+                电脑端
+            </label>
+            <label for="mobile">
+                <input type="radio" id="mobile" name="image_type" value="mobile" {{if .data.IsMobile}}checked{{end}}>
+                手机端
+            </label>
+        </fieldset>
+
+        <label for="other_tags">其他标签 (逗号分隔)</label>
+        <input type="text" id="other_tags" name="other_tags" value="{{.data.OtherTags}}" placeholder="风景, 美女, 动漫">
+
+        <button type="submit">保存</button>
+        <a href="/admin" role="button" class="secondary">取消</a>
+    </form>
+</article>
+{{end}}
+{{end}}
