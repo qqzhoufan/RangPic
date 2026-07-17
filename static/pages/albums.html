@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>相册 — 咸鱼图床</title>
+  <link rel="icon" href="/static/favicon.svg">
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+  <div id="nav-mount"></div>
+  <main class="container page" data-title="相册">
+    <div class="between" style="margin-bottom:var(--s-5);flex-wrap:wrap;gap:12px">
+      <div><h1 class="serif">相册</h1><p class="muted">把图片归档成集，便于整理与分享</p></div>
+      <button class="btn btn-primary" id="new-btn"><span id="new-ico"></span>新建相册</button>
+    </div>
+    <div class="split" id="list"></div>
+  </main>
+  <div id="footer-mount"></div>
+  <script src="/static/js/app.js"></script>
+  <script src="/static/js/page-albums.js"></script>
+</body>
+</html>

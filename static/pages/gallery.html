@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>我的图库 — 咸鱼图床</title>
+  <link rel="icon" href="/static/favicon.svg">
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+  <div id="nav-mount"></div>
+  <main class="container page" data-title="我的图库">
+    <div class="between" style="margin-bottom:var(--s-4);flex-wrap:wrap;gap:12px">
+      <div><h1 class="serif">我的图库</h1><p class="muted" id="count-line">加载中…</p></div>
+      <div class="row">
+        <button class="btn btn-outline" id="select-btn"><span id="sel-ico"></span>选择</button>
+        <button class="btn btn-danger hide" id="del-sel-btn">删除所选</button>
+        <a class="btn btn-primary" href="/upload">上传</a>
+      </div>
+    </div>
+
+    <div class="card card-pad" style="margin-bottom:var(--s-4)">
+      <div class="row wrap" style="gap:var(--s-4);align-items:flex-end">
+        <div class="field grow" style="min-width:180px">
+          <label>搜索文件名</label>
+          <input class="input" id="f-search" placeholder="输入关键词…">
+        </div>
+        <div class="field" style="min-width:140px"><label>标签</label><input class="input" id="f-tag" placeholder="标签"></div>
+        <div class="field" style="min-width:130px">
+          <label>可见性</label>
+          <select class="select" id="f-privacy">
+            <option value="">全部</option>
+            <option value="public">公开</option>
+            <option value="unlisted">不公开</option>
+            <option value="private">私有</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" id="filter-btn">筛选</button>
+        <button class="btn btn-ghost" id="reset-btn">重置</button>
+      </div>
+    </div>
+
+    <div class="masonry" id="grid"></div>
+    <div class="pager" id="pager"></div>
+  </main>
+  <div id="footer-mount"></div>
+  <script src="/static/js/app.js"></script>
+  <script src="/static/js/page-gallery.js"></script>
+</body>
+</html>

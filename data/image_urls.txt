@@ -1,2 +1,6 @@
-https://example.com/another-sky.webp,sky,blue
-https://example.com/a-city-street.webp,city,street
+https://picsum.photos/seed/mountains/1920/1080,desktop,nature,landscape
+https://picsum.photos/seed/forest/1920/1080,desktop,nature,green
+https://picsum.photos/seed/ocean/1920/1080,desktop,nature,blue
+https://picsum.photos/seed/city-night/1920/1080,desktop,city,night
+https://picsum.photos/seed/phone-wall/1080/1920,mobile,abstract
+https://picsum.photos/seed/minimal/1080/1920,mobile,minimal

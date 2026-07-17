@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>上传 — 咸鱼图床</title>
+  <link rel="icon" href="/static/favicon.svg">
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+  <div id="nav-mount"></div>
+  <main class="container page" data-title="上传">
+    <div class="between" style="margin-bottom:var(--s-5);flex-wrap:wrap;gap:12px">
+      <div>
+        <h1 class="serif">上传图片</h1>
+        <p class="muted">拖拽、粘贴或选择文件；也可以从 URL 导入</p>
+      </div>
+      <div id="quota-mini" class="card" style="padding:10px 14px;min-width:200px"></div>
+    </div>
+
+    <div class="tabs">
+      <button data-tab="file" class="active">文件上传</button>
+      <button data-tab="url">从 URL 导入</button>
+    </div>
+
+    <div id="tab-file">
+      <label class="dropzone" id="dropzone" for="file-input">
+        <div class="big-ico" id="dz-ico"></div>
+        <strong>拖拽图片到这里，或点击选择</strong>
+        <p class="subtle" style="margin-top:6px">支持 JPG · PNG · GIF · WebP · BMP · ICO · 也可以直接 Ctrl+V 粘贴</p>
+        <input type="file" id="file-input" multiple accept="image/*" hidden>
+      </label>
+    </div>
+
+    <div id="tab-url" class="hide">
+      <div class="card card-pad stack">
+        <div class="field">
+          <label>图片 URL</label>
+          <div class="input-group">
+            <input class="input" id="url-input" placeholder="https://example.com/photo.jpg">
+            <button class="btn btn-primary" id="url-go">导入</button>
+          </div>
+          <span class="field-help">服务器会下载该图片并转存到你的图库</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card card-pad" style="margin-top:var(--s-4)">
+      <div class="row wrap" style="gap:var(--s-5)">
+        <div class="field" style="min-width:220px">
+          <label>归属文件夹（相册）</label>
+          <select class="select" id="opt-album">
+            <option value="">（不归档到任何文件夹）</option>
+          </select>
+        </div>
+        <div class="field" style="min-width:200px">
+          <label>可见性</label>
+          <div class="segmented" id="privacy-seg">
+            <button data-v="public" class="active">公开</button>
+            <button data-v="unlisted">不公开</button>
+            <button data-v="private">私有</button>
+          </div>
+        </div>
+        <div class="field grow">
+          <label>标签（逗号分隔）</label>
+          <input class="input" id="opt-tags" placeholder="desktop, nature, sky">
+        </div>
+        <div class="field" style="min-width:150px">
+          <label>自动过期（小时）</label>
+          <input class="input" id="opt-expires" type="number" min="0" placeholder="留空=永久">
+        </div>
+      </div>
+    </div>
+
+    <div id="queue" class="stack" style="margin-top:var(--s-5)"></div>
+    <div id="results" class="stack" style="margin-top:var(--s-5)"></div>
+  </main>
+  <div id="footer-mount"></div>
+  <script src="/static/js/app.js"></script>
+  <script src="/static/js/page-upload.js"></script>
+</body>
+</html>

@@ -1,0 +1,74 @@
+[package]
+name = "rangpic"
+version = "0.2.0"
+edition = "2021"
+authors = ["RangPic"]
+description = "RangPic — a self-hosted image host with a flagship random-image API"
+license = "MIT"
+
+[[bin]]
+name = "rangpic"
+path = "src/main.rs"
+
+[dependencies]
+# Web framework
+axum = { version = "0.8", features = ["multipart", "macros"] }
+axum-extra = { version = "0.10", features = ["cookie"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["trace", "cors", "compression-gzip", "fs", "set-header"] }
+http = "1"
+cookie = "0.18"
+
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+tokio-util = { version = "0.7", features = ["io"] }
+futures = "0.3"
+
+# Database
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "macros", "migrate", "json"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# IDs & time
+uuid = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", default-features = false, features = ["clock", "serde"] }
+
+# Auth & crypto
+argon2 = "0.5"
+rand = "0.8"
+sha2 = "0.10"
+base64 = "0.22"
+hex = "0.4"
+hmac = "0.12"
+
+# Image processing
+image = { version = "0.25", default-features = false, features = ["jpeg", "png", "gif", "webp", "bmp", "ico", "tiff"] }
+
+# HTTP client (remote URL proxying + URL upload)
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "stream"] }
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Errors
+thiserror = "1"
+anyhow = "1"
+
+# Misc
+async-trait = "0.1"
+mime = "0.3"
+mime_guess = "2"
+bytes = "1"
+percent-encoding = "2"
+url = "2"
+rust-embed = "8"
+dotenvy = "0.15"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+strip = true

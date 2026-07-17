@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>管理后台 — 咸鱼图床</title>
+  <link rel="icon" href="/static/favicon.svg">
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+  <div id="nav-mount"></div>
+  <main class="container page" data-title="管理">
+    <div class="between" style="margin-bottom:var(--s-5);flex-wrap:wrap;gap:12px">
+      <div><h1 class="serif">管理后台</h1><p class="muted">站点统计、用户与内容管理</p></div>
+      <span class="badge role" id="me-badge">管理员</span>
+    </div>
+    <div class="tabs">
+      <button data-tab="overview" class="active">概览</button>
+      <button data-tab="users">用户</button>
+      <button data-tab="images">图片</button>
+      <button data-tab="site">站点设置</button>
+    </div>
+
+    <div id="tab-overview">
+      <div class="grid-stats" id="a-stats"></div>
+      <div class="section-title" style="margin-top:var(--s-6)"><h2 class="serif">来源构成</h2></div>
+      <div class="split" id="a-source"></div>
+    </div>
+
+    <div id="tab-users" class="hide">
+      <div class="table-wrap">
+        <table class="table" id="users-table">
+          <thead><tr><th>用户</th><th>角色</th><th>已用 / 配额(MB)</th><th>状态</th><th>注册时间</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="tab-images" class="hide">
+      <div class="masonry" id="a-grid"></div>
+      <div class="pager" id="a-pager"></div>
+    </div>
+
+    <div id="tab-site" class="hide">
+      <div class="card card-pad stack" style="max-width:620px">
+        <div class="field">
+          <label>项目域名（用于生成绝对分享 / 嵌入链接）</label>
+          <input class="input" id="s-url" placeholder="例如 https://pic.example.com（留空则使用相对链接）">
+          <span class="field-help">其他人访问站点所用的地址。留空时分享链接使用相对路径，适合反向代理或本地使用。</span>
+        </div>
+        <div class="field"><label>站点名称</label><input class="input" id="s-name"></div>
+        <div class="field"><label>站点描述</label><input class="input" id="s-desc"></div>
+        <div class="field"><label>首页文案（副标题）</label><input class="input" id="s-blurb" placeholder="留空使用默认"></div>
+        <div class="field"><label>新用户默认配额（MB，0 表示不限）</label><input class="input" id="s-quota" type="number" min="0" placeholder="100"></div>
+        <div class="checkrow"><input type="checkbox" id="s-reg"><label for="s-reg">开放公开注册</label></div>
+        <div><button class="btn btn-primary" id="s-save">保存设置</button></div>
+      </div>
+    </div>
+  </main>
+  <div id="footer-mount"></div>
+  <script src="/static/js/app.js"></script>
+  <script src="/static/js/page-admin.js"></script>
+</body>
+</html>

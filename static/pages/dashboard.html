@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>控制台 — 咸鱼图床</title>
+  <link rel="icon" href="/static/favicon.svg">
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+  <div id="nav-mount"></div>
+  <main class="container page" data-title="控制台">
+    <div class="between" style="margin-bottom:var(--s-5);flex-wrap:wrap;gap:12px">
+      <div><h1 class="serif" id="greet">控制台</h1><p class="muted">你的图片、配额与近期动态</p></div>
+      <div class="row">
+        <a class="btn btn-outline" href="/upload"><span id="up-ico"></span>上传</a>
+        <a class="btn btn-primary" href="/gallery">我的图库</a>
+      </div>
+    </div>
+
+    <div class="grid-stats" id="stats"></div>
+
+    <div class="card card-pad" style="margin-top:var(--s-4)">
+      <div class="between"><strong>存储配额</strong><span class="muted" id="quota-text" style="font-size:.85rem"></span></div>
+      <div class="meter" id="quota-meter" style="margin-top:10px"><i></i></div>
+    </div>
+
+    <div class="section-title" style="margin-top:var(--s-7)"><h2 class="serif">最近上传</h2><a href="/gallery">查看全部</a></div>
+    <div class="masonry" id="recent"></div>
+  </main>
+  <div id="footer-mount"></div>
+  <script src="/static/js/app.js"></script>
+  <script src="/static/js/page-dashboard.js"></script>
+</body>
+</html>

@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>咸鱼图床 — 随机图片与自托管图床</title>
+  <meta name="description" content="咸鱼图床 是一个自托管的随机图片服务与图床，提供随机图 API、上传托管、相册与分享链接。">
+  <link rel="icon" href="/static/favicon.svg">
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+  <div id="nav-mount"></div>
+
+  <main>
+    <!-- hero -->
+    <section class="container">
+      <div class="hero">
+        <div>
+          <div class="eyebrow"><span class="pulse-dot" style="display:inline-block;vertical-align:middle;margin-right:6px"></span>一次请求，一张随机图</div>
+          <h1 class="serif" style="margin-top:14px">把随机图<br>当作基础设施</h1>
+          <p class="lead" style="margin-top:16px">一个链接拿到一张随机图片，支持按标签过滤。同时是一套完整的自托管图床：上传、相册、缩略图、分享链接、API Token，全部由你掌控。</p>
+          <div class="cta-row">
+            <a class="btn btn-primary btn-lg" href="/register">开始使用</a>
+            <a class="btn btn-outline btn-lg" href="/explore">浏览图库</a>
+          </div>
+          <div class="copy-row" style="margin-top:22px">
+            <span class="kbd">GET</span>
+            <code class="code grow" id="api-sample">/random-image?tags=desktop</code>
+            <button class="btn btn-outline" id="copy-api">复制</button>
+          </div>
+        </div>
+
+        <div>
+          <div class="feature" style="aspect-ratio:4/3">
+            <img id="hero-img" alt="随机图片" src="">
+          </div>
+          <div class="between" style="margin-top:12px">
+            <div class="row" id="hero-tags" style="flex-wrap:wrap"></div>
+            <button class="btn btn-outline btn-sm" id="hero-refresh">换一张</button>
+          </div>
+          <div class="card card-pad" style="margin-top:12px">
+            <div class="row between" style="margin-bottom:10px">
+              <strong style="font-size:.9rem">直链与嵌入代码</strong>
+              <a class="btn btn-ghost btn-sm" id="hero-share" href="#">分享页</a>
+            </div>
+            <div class="stack" style="gap:8px">
+              <div class="copy-row"><code class="code grow" id="lnk-direct">-</code><button class="btn btn-outline copy-btn" data-target="lnk-direct">复制</button></div>
+              <div class="copy-row"><code class="code grow" id="lnk-md">-</code><button class="btn btn-outline copy-btn" data-target="lnk-md">复制</button></div>
+              <div class="copy-row"><code class="code grow" id="lnk-html">-</code><button class="btn btn-outline copy-btn" data-target="lnk-html">复制</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- tag rail -->
+    <section class="container" style="margin-top:var(--s-6)">
+      <div class="section-title"><h2 class="serif">按标签筛选</h2><span class="subtle" style="font-size:.85rem">点击直达对应标签的随机图</span></div>
+      <div class="row wrap" id="tag-rail"></div>
+    </section>
+
+    <!-- features (content-first) -->
+    <section class="container" style="margin-top:var(--s-7)">
+      <div class="section-title"><h2 class="serif">不止随机图</h2></div>
+      <div class="split">
+        <div class="feature-note">
+          <div class="ico" id="ico-shuffle"></div>
+          <div><h3>随机图 API</h3><p>直接重定向到图片，或返回 JSON 元数据；标签大小写不敏感、支持子串匹配。</p></div>
+        </div>
+        <div class="feature-note">
+          <div class="ico" id="ico-upload"></div>
+          <div><h3>上传与托管</h3><p>拖拽或粘贴上传，自动生成 WebP 缩略图、SHA-256 去重、按用户配额限制。</p></div>
+        </div>
+        <div class="feature-note">
+          <div class="ico" id="ico-layers"></div>
+          <div><h3>相册与分享</h3><p>归入相册、设置公开 / 不公开 / 私有，一键复制直链、Markdown、HTML、BBCode。</p></div>
+        </div>
+        <div class="feature-note">
+          <div class="ico" id="ico-key"></div>
+          <div><h3>API Token</h3><p>为 PicGo、脚本或客户端签发令牌，上传走 <span class="mono">/api/upload</span>，链路完整。</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- recent -->
+    <section class="container" style="margin-top:var(--s-7)">
+      <div class="section-title">
+        <h2 class="serif">最近公开图片</h2>
+        <a href="/explore">查看全部</a>
+      </div>
+      <div class="masonry" id="recent"></div>
+    </section>
+  </main>
+
+  <div id="footer-mount"></div>
+  <script src="/static/js/app.js"></script>
+  <script src="/static/js/page-index.js"></script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+target/
+git/
+storage/
+local_images/
+*.log
+.env
+.env.*
+core
+core.*
+Dockerfile
+docker-compose.yaml
+.dockerignore
+.gitignore
+Readme.md
+CLAUDE.md

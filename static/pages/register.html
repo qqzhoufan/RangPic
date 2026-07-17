@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>注册 — 咸鱼图床</title>
+  <link rel="icon" href="/static/favicon.svg">
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+  <div id="nav-mount"></div>
+  <main class="auth-wrap" data-title="注册">
+    <div class="auth-card">
+      <div class="center" style="margin-bottom:var(--s-5)">
+        <div class="brand" style="justify-content:center;font-size:1.6rem"><span class="mark" id="mk"></span></div>
+        <h1 class="serif" style="margin-top:var(--s-4)">创建账号</h1>
+        <p class="muted">注册后即可上传、管理与分享图片</p>
+      </div>
+      <form id="auth-form" class="stack">
+        <div class="field">
+          <label>用户名</label>
+          <input class="input" name="username" autocomplete="username" autofocus required>
+          <span class="field-help">3–32 个字符，可用字母、数字、下划线、短横线</span>
+        </div>
+        <div class="field">
+          <label>密码</label>
+          <input class="input" type="password" name="password" autocomplete="new-password" required>
+          <span class="field-help">至少 6 个字符</span>
+        </div>
+        <div class="field">
+          <label>确认密码</label>
+          <input class="input" type="password" name="password2" autocomplete="new-password" required>
+        </div>
+        <button class="btn btn-primary btn-block btn-lg" type="submit" id="submit-btn">注册</button>
+      </form>
+      <p class="auth-alt">已有账号？<a href="/login">直接登录</a></p>
+    </div>
+  </main>
+  <div id="footer-mount"></div>
+  <script src="/static/js/app.js"></script>
+  <script src="/static/js/page-auth.js"></script>
+</body>
+</html>

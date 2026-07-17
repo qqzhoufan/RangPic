@@ -1,0 +1,20 @@
+# Rust
+/target/
+**/*.rs.bk
+
+# runtime data
+/storage/
+/local_images/
+*.local
+
+# env
+.env
+.env.*
+!.env.example
+
+# editor / os
+.vscode/
+.idea/
+.DS_Store
+core
+core.*

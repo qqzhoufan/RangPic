@@ -1,32 +1,41 @@
-version: '3.8'
-
 services:
-  random-pic-service:
-    # build: . # 从当前目录的 Dockerfile 构建
-    image: zhouwl/my-random-pic:latest  # 使用预构建的镜像
-    container_name: my_random_pic
+  app:
+    build: .
+    # image: ghcr.io/qqzhoufan/rangpic:latest   # or build from source as above
+    container_name: rangpic
+    restart: unless-stopped
     ports:
       - "17777:17777"
-    restart: unless-stopped
-    depends_on:
-      - db
-    volumes:
-      - ./local_images:/app/local_images  # 绑定挂载本地目录
     environment:
-      - DATABASE_URL=postgres://user:password@db:5432/random_pic_db?sslmode=disable
-      - ADMIN_USERNAME=admin
-      - ADMIN_PASSWORD=changeme
+      DATABASE_URL: postgres://rangpic:rangpic@db:5432/rangpic?sslmode=disable
+      ADMIN_USERNAME: admin
+      ADMIN_PASSWORD: changeme
+      # Public base URL used to build absolute share/embed links:
+      SITE_URL: http://localhost:17777
+      MAX_UPLOAD_BYTES: "26214400"   # 25 MiB per file
+      QUOTA_DEFAULT_BYTES: "104857600"  # 100 MiB per new user (admin-configurable)
+      RUST_LOG: info,rangpic=debug
+    volumes:
+      - ./storage:/app/storage
+    depends_on:
+      db:
+        condition: service_healthy
 
   db:
-    image: postgres:13
-    container_name: postgres_db
+    image: postgres:16-alpine
+    container_name: rangpic-db
     restart: unless-stopped
     environment:
-      - POSTGRES_DB=random_pic_db
-      - POSTGRES_USER=user
-      - POSTGRES_PASSWORD=password
+      POSTGRES_DB: rangpic
+      POSTGRES_USER: rangpic
+      POSTGRES_PASSWORD: rangpic
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rangpic -d rangpic"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
 
 volumes:
-  postgres_data:  # 仅保留必要卷
+  pgdata:
