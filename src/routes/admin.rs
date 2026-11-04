@@ -17,7 +17,10 @@ pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/api/admin/stats", get(stats))
         .route("/api/admin/users", get(list_users))
-        .route("/api/admin/users/{id}", patch(update_user).delete(delete_user))
+        .route(
+            "/api/admin/users/{id}",
+            patch(update_user).delete(delete_user),
+        )
         .route("/api/admin/images", get(list_images))
         .route("/api/admin/images/{id}", delete(delete_image))
         .route("/api/admin/settings", get(get_settings).put(set_settings))
@@ -178,7 +181,9 @@ async fn list_images(
     .fetch_all(state.db())
     .await?;
     let items: Vec<Value> = images.iter().map(|i| image_json(i, None, &state)).collect();
-    Ok(Json(json!({ "items": items, "total": total, "limit": limit, "offset": offset })))
+    Ok(Json(
+        json!({ "items": items, "total": total, "limit": limit, "offset": offset }),
+    ))
 }
 
 async fn delete_image(
@@ -194,11 +199,12 @@ async fn delete_image(
         let _ = state.storage().delete(key).await;
     }
     if let Some(owner) = img.owner_id {
-        let _ = sqlx::query("UPDATE users SET used_bytes = GREATEST(used_bytes - $1, 0) WHERE id = $2")
-            .bind(img.size_bytes)
-            .bind(owner)
-            .execute(state.db())
-            .await;
+        let _ =
+            sqlx::query("UPDATE users SET used_bytes = GREATEST(used_bytes - $1, 0) WHERE id = $2")
+                .bind(img.size_bytes)
+                .bind(owner)
+                .execute(state.db())
+                .await;
     }
     sqlx::query("DELETE FROM images WHERE id = $1")
         .bind(id)
@@ -216,7 +222,10 @@ const ALLOWED_SETTINGS: &[&str] = &[
     "default_quota_bytes",
 ];
 
-async fn get_settings(AdminUser(_): AdminUser, State(state): State<AppState>) -> AppResult<Json<HashMap<String, String>>> {
+async fn get_settings(
+    AdminUser(_): AdminUser,
+    State(state): State<AppState>,
+) -> AppResult<Json<HashMap<String, String>>> {
     let rows: Vec<(String, String)> = sqlx::query_as("SELECT key, value FROM settings")
         .fetch_all(state.db())
         .await?;

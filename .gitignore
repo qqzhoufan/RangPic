@@ -4,6 +4,7 @@
 
 # runtime data
 /storage/
+/rangpic-data/
 /local_images/
 *.local
 

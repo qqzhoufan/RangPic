@@ -1,6 +1,7 @@
 target/
 git/
 storage/
+rangpic-data
 local_images/
 *.log
 .env

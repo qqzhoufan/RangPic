@@ -77,7 +77,8 @@ impl User {
     }
 }
 
-pub const ALBUM_COLUMNS: &str = "id, owner_id, name, slug, description, privacy::text AS privacy, created_at";
+pub const ALBUM_COLUMNS: &str =
+    "id, owner_id, name, slug, description, privacy::text AS privacy, created_at";
 
 #[derive(Clone, Debug, FromRow, Serialize)]
 pub struct Album {

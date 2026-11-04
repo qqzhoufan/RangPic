@@ -24,7 +24,8 @@ impl Config {
         let _ = dotenvy::dotenv();
 
         let database_url = env_or_fatal("DATABASE_URL");
-        let storage_dir = PathBuf::from(env::var("STORAGE_DIR").unwrap_or_else(|_| "storage".to_string()));
+        let storage_dir =
+            PathBuf::from(env::var("STORAGE_DIR").unwrap_or_else(|_| "storage".to_string()));
         let data_dir = PathBuf::from(env::var("DATA_DIR").unwrap_or_else(|_| ".".to_string()));
 
         Ok(Self {
@@ -43,8 +44,10 @@ impl Config {
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(100 * 1024 * 1024), // 100 MiB default per new user
             registration_open: env_bool("REGISTRATION_OPEN", true),
-            bootstrap_admin_username: env::var("ADMIN_USERNAME").unwrap_or_else(|_| "admin".to_string()),
-            bootstrap_admin_password: env::var("ADMIN_PASSWORD").unwrap_or_else(|_| "adminpass".to_string()),
+            bootstrap_admin_username: env::var("ADMIN_USERNAME")
+                .unwrap_or_else(|_| "admin".to_string()),
+            bootstrap_admin_password: env::var("ADMIN_PASSWORD")
+                .unwrap_or_else(|_| "adminpass".to_string()),
             session_ttl_hours: env::var("SESSION_TTL_HOURS")
                 .ok()
                 .and_then(|v| v.parse().ok())
@@ -61,7 +64,10 @@ fn env_or_fatal(key: &str) -> String {
 
 fn env_bool(key: &str, default: bool) -> bool {
     match env::var(key) {
-        Ok(v) => matches!(v.trim().to_ascii_lowercase().as_str(), "1" | "true" | "yes" | "on"),
+        Ok(v) => matches!(
+            v.trim().to_ascii_lowercase().as_str(),
+            "1" | "true" | "yes" | "on"
+        ),
         Err(_) => default,
     }
 }

@@ -34,7 +34,10 @@ pub fn app_router(state: AppState) -> Router {
         .merge(admin::routes())
         .merge(pages::routes())
         .with_state(state)
-        .layer(security_headers(http::header::X_CONTENT_TYPE_OPTIONS, "nosniff"))
+        .layer(security_headers(
+            http::header::X_CONTENT_TYPE_OPTIONS,
+            "nosniff",
+        ))
         .layer(security_headers(
             http::header::REFERRER_POLICY,
             "strict-origin-when-cross-origin",
@@ -82,6 +85,67 @@ pub(crate) fn ensure_viewable(img: &Image, viewer: Option<&crate::db::User>) -> 
     }
 }
 
+/// The album must belong to `owner_id`. Used when attaching an upload or moving an image.
+pub(crate) async fn ensure_album_owner(
+    db: &sqlx::PgPool,
+    album_id: Uuid,
+    owner_id: Uuid,
+) -> AppResult<()> {
+    let owns: bool =
+        sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM albums WHERE id = $1 AND owner_id = $2)")
+            .bind(album_id)
+            .bind(owner_id)
+            .fetch_one(db)
+            .await?;
+    if owns {
+        Ok(())
+    } else {
+        Err(AppError::BadRequest("相册不存在或不属于该用户".into()))
+    }
+}
+
+fn entity_tag(img: &Image) -> Option<HeaderValue> {
+    let sha = img.sha256.as_deref()?;
+    if sha.is_empty() || !sha.bytes().all(|b| b.is_ascii_hexdigit()) {
+        return None;
+    }
+    HeaderValue::from_str(&format!("\"{sha}\"")).ok()
+}
+
+pub(crate) fn if_none_match(headers: &axum::http::HeaderMap, img: &Image) -> bool {
+    let Some(tag) = entity_tag(img) else {
+        return false;
+    };
+    let Ok(tag) = tag.to_str() else {
+        return false;
+    };
+    let Some(inm) = headers
+        .get(header::IF_NONE_MATCH)
+        .and_then(|v| v.to_str().ok())
+    else {
+        return false;
+    };
+    inm.split(',').any(|part| part.trim() == tag)
+}
+
+pub(crate) fn apply_media_cache(headers: &mut axum::http::HeaderMap, img: &Image) {
+    let value = match img.privacy.as_str() {
+        "public" => "public, max-age=3600",
+        _ => "private, max-age=300",
+    };
+    headers.insert(header::CACHE_CONTROL, HeaderValue::from_static(value));
+    if let Some(tag) = entity_tag(img) {
+        headers.insert(header::ETAG, tag);
+    }
+}
+
+pub(crate) fn not_modified(img: &Image) -> Response {
+    let mut resp = Response::new(Body::empty());
+    *resp.status_mut() = StatusCode::NOT_MODIFIED;
+    apply_media_cache(resp.headers_mut(), img);
+    resp
+}
+
 /// Build the public JSON shape for an image. `url`/`thumb`/`share` are relative
 /// paths (safe for in-page `<img>` display from any origin); `links.*` are
 /// absolute, built from the configured site domain, for copy/paste elsewhere.
@@ -90,9 +154,21 @@ pub(crate) fn image_json(img: &Image, owner_name: Option<String>, state: &AppSta
     let rel_direct = format!("/i/{}", img.id);
     let rel_thumb = format!("/t/{}", img.id);
     let rel_share = format!("/s/{}", img.id);
-    let direct = if base.is_empty() { rel_direct.clone() } else { format!("{base}{rel_direct}") };
-    let thumb_abs = if base.is_empty() { rel_thumb.clone() } else { format!("{base}{rel_thumb}") };
-    let share_abs = if base.is_empty() { rel_share.clone() } else { format!("{base}{rel_share}") };
+    let direct = if base.is_empty() {
+        rel_direct.clone()
+    } else {
+        format!("{base}{rel_direct}")
+    };
+    let thumb_abs = if base.is_empty() {
+        rel_thumb.clone()
+    } else {
+        format!("{base}{rel_thumb}")
+    };
+    let share_abs = if base.is_empty() {
+        rel_share.clone()
+    } else {
+        format!("{base}{rel_share}")
+    };
     let alt = if !img.original_name.is_empty() {
         img.original_name.clone()
     } else {
@@ -132,7 +208,7 @@ pub(crate) fn image_json(img: &Image, owner_name: Option<String>, state: &AppSta
 }
 
 /// Serve an image's bytes — from local storage for uploads, or proxied for remote URLs.
-pub(crate) async fn render_image(state: &AppState, img: &Image, long_cache: bool) -> AppResult<Response> {
+pub(crate) async fn render_image(state: &AppState, img: &Image) -> AppResult<Response> {
     if img.is_local() {
         let key = img.storage_key.as_deref().ok_or(AppError::NotFound)?;
         let file = state.storage().open(key).await?;
@@ -148,27 +224,17 @@ pub(crate) async fn render_image(state: &AppState, img: &Image, long_cache: bool
                 resp.headers_mut().insert(header::CONTENT_LENGTH, cl);
             }
         }
-        resp.headers_mut().insert(
-            header::CACHE_CONTROL,
-            HeaderValue::from_static(if long_cache {
-                "public, max-age=31536000, immutable"
-            } else {
-                "public, max-age=300"
-            }),
-        );
+        apply_media_cache(resp.headers_mut(), img);
         Ok(resp)
     } else {
-        proxy_remote(state, &img.url).await
+        let mut resp = proxy_remote(state, &img.url).await?;
+        apply_media_cache(resp.headers_mut(), img);
+        Ok(resp)
     }
 }
 
 pub(crate) async fn proxy_remote(state: &AppState, url: &str) -> AppResult<Response> {
-    let resp = state
-        .http()
-        .get(url)
-        .send()
-        .await
-        .map_err(|e| AppError::BadRequest(format!("无法获取远程图片: {e}")))?;
+    let resp = crate::netguard::guarded_get(state.http(), url).await?;
     let status = resp.status();
     let ct = resp
         .headers()
@@ -193,10 +259,6 @@ pub(crate) async fn proxy_remote(state: &AppState, url: &str) -> AppResult<Respo
             out.headers_mut().insert(header::CONTENT_LENGTH, v);
         }
     }
-    out.headers_mut().insert(
-        header::CACHE_CONTROL,
-        HeaderValue::from_static("public, max-age=86400"),
-    );
     Ok(out)
 }
 
@@ -204,12 +266,7 @@ pub(crate) async fn proxy_remote(state: &AppState, url: &str) -> AppResult<Respo
 /// image — used by the random-image proxy so it can skip dead/remote entries
 /// and try another pick.
 pub(crate) async fn fetch_remote_image(state: &AppState, url: &str) -> AppResult<Response> {
-    let resp = state
-        .http()
-        .get(url)
-        .send()
-        .await
-        .map_err(|e| AppError::BadRequest(format!("无法获取远程图片: {e}")))?;
+    let resp = crate::netguard::guarded_get(state.http(), url).await?;
     if !resp.status().is_success() {
         return Err(AppError::NotFound);
     }
@@ -238,10 +295,6 @@ pub(crate) async fn fetch_remote_image(state: &AppState, url: &str) -> AppResult
             out.headers_mut().insert(header::CONTENT_LENGTH, v);
         }
     }
-    out.headers_mut().insert(
-        header::CACHE_CONTROL,
-        HeaderValue::from_static("public, max-age=86400"),
-    );
     Ok(out)
 }
 
@@ -257,10 +310,7 @@ pub(crate) async fn serve_thumb(state: &AppState, img: &Image) -> AppResult<Resp
         header::CONTENT_TYPE,
         HeaderValue::from_static(crate::imaging::THUMBNAIL_CONTENT_TYPE),
     );
-    resp.headers_mut().insert(
-        header::CACHE_CONTROL,
-        HeaderValue::from_static("public, max-age=31536000, immutable"),
-    );
+    apply_media_cache(resp.headers_mut(), img);
     Ok(resp)
 }
 

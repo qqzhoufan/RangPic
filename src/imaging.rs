@@ -68,7 +68,9 @@ pub fn detect(bytes: &[u8]) -> Option<Format> {
     if bytes.len() >= 8 && bytes[0..8] == [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A] {
         return Some(Format::Png);
     }
-    if bytes.len() >= 6 && &bytes[0..6] == b"GIF87a" || bytes.len() >= 6 && &bytes[0..6] == b"GIF89a" {
+    if bytes.len() >= 6 && &bytes[0..6] == b"GIF87a"
+        || bytes.len() >= 6 && &bytes[0..6] == b"GIF89a"
+    {
         return Some(Format::Gif);
     }
     if bytes.len() >= 12 && &bytes[0..4] == b"RIFF" && &bytes[8..12] == b"WEBP" {
@@ -89,12 +91,6 @@ pub fn sha256_hex(bytes: &[u8]) -> String {
     hex::encode(h.finalize())
 }
 
-/// (width, height) of an image, if it can be decoded.
-pub fn dimensions(bytes: &[u8]) -> Option<(u32, u32)> {
-    let img = decode(bytes).ok()?;
-    Some(img.dimensions())
-}
-
 fn decode(bytes: &[u8]) -> AppResult<DynamicImage> {
     image::load_from_memory(bytes).map_err(|e| {
         tracing::warn!(error = %e, "image decode failed");
@@ -102,24 +98,65 @@ fn decode(bytes: &[u8]) -> AppResult<DynamicImage> {
     })
 }
 
-/// Render a WebP thumbnail fit within `max` px on the long edge. Animated GIFs
-/// collapse to their first frame in the thumbnail (the original is preserved).
-pub fn make_thumbnail(bytes: &[u8], max: u32) -> AppResult<Vec<u8>> {
+/// Width, height, and a WebP thumbnail from a single decode.
+/// The thumbnail fits inside `max_edge` on both sides. Animated GIFs collapse
+/// to their first frame here; the caller stores the original bytes unchanged.
+pub struct Preview {
+    pub width: u32,
+    pub height: u32,
+    pub thumbnail: Vec<u8>,
+}
+
+pub fn preview(bytes: &[u8], max_edge: u32) -> AppResult<Preview> {
     let img = decode(bytes)?;
-    let thumb = if img.width() > max || img.height() > max {
-        img.resize(max, max, image::imageops::FilterType::Lanczos3)
+    let (width, height) = img.dimensions();
+    let thumb = if width > max_edge || height > max_edge {
+        img.resize(max_edge, max_edge, image::imageops::FilterType::Triangle)
     } else {
         img
     };
-    let mut out = Vec::with_capacity(8 * 1024);
-    let mut cur = Cursor::new(&mut out);
+    let mut thumbnail = Vec::with_capacity(8 * 1024);
     thumb
-        .write_to(&mut cur, ImageFormat::WebP)
+        .write_to(&mut Cursor::new(&mut thumbnail), ImageFormat::WebP)
         .map_err(|e| {
             tracing::warn!(error = %e, "thumbnail encode failed");
             AppError::UnsupportedFormat
         })?;
-    Ok(out)
+    Ok(Preview {
+        width,
+        height,
+        thumbnail,
+    })
 }
 
 pub const THUMBNAIL_CONTENT_TYPE: &str = "image/webp";
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn png(width: u32, height: u32) -> Vec<u8> {
+        let img = image::RgbImage::from_pixel(width, height, image::Rgb([10, 20, 30]));
+        let mut bytes = Vec::new();
+        DynamicImage::ImageRgb8(img)
+            .write_to(&mut Cursor::new(&mut bytes), ImageFormat::Png)
+            .unwrap();
+        bytes
+    }
+
+    #[test]
+    fn preview_shrinks_the_long_edge() {
+        let preview = preview(&png(8, 4), 2).unwrap();
+        assert_eq!((preview.width, preview.height), (8, 4));
+        let thumb = image::load_from_memory(&preview.thumbnail).unwrap();
+        assert!(thumb.width() <= 2 && thumb.height() <= 2);
+        assert!(thumb.width() == 2 || thumb.height() == 2);
+    }
+
+    #[test]
+    fn preview_keeps_small_images() {
+        let preview = preview(&png(2, 2), 480).unwrap();
+        let thumb = image::load_from_memory(&preview.thumbnail).unwrap();
+        assert_eq!((thumb.width(), thumb.height()), (2, 2));
+    }
+}

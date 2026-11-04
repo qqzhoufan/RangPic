@@ -76,9 +76,11 @@ async fn registration_open(state: &AppState) -> bool {
 /// Default per-user storage quota (bytes) for newly registered users.
 /// Reads the `default_quota_bytes` admin setting; 0 means unlimited.
 async fn default_quota_bytes(state: &AppState) -> i64 {
-    if let Ok(Some((v,))) = sqlx::query_as::<_, (String,)>("SELECT value FROM settings WHERE key = 'default_quota_bytes'")
-        .fetch_optional(state.db())
-        .await
+    if let Ok(Some((v,))) = sqlx::query_as::<_, (String,)>(
+        "SELECT value FROM settings WHERE key = 'default_quota_bytes'",
+    )
+    .fetch_optional(state.db())
+    .await
     {
         if let Ok(n) = v.trim().parse::<i64>() {
             return n.max(0);
@@ -135,11 +137,10 @@ async fn register(
         return Err(AppError::Forbidden);
     }
     // uniqueness check (the unique index also enforces this)
-    let existing: Option<(Uuid,)> =
-        sqlx::query_as("SELECT id FROM users WHERE username = $1")
-            .bind(&username)
-            .fetch_optional(state.db())
-            .await?;
+    let existing: Option<(Uuid,)> = sqlx::query_as("SELECT id FROM users WHERE username = $1")
+        .bind(&username)
+        .fetch_optional(state.db())
+        .await?;
     if existing.is_some() {
         return Err(AppError::Conflict("用户名已被占用".into()));
     }
@@ -181,10 +182,7 @@ async fn login(
     Ok((jar, Json(json!({ "you": summary }))))
 }
 
-async fn logout(
-    State(state): State<AppState>,
-    jar: CookieJar,
-) -> (CookieJar, Json<Value>) {
+async fn logout(State(state): State<AppState>, jar: CookieJar) -> (CookieJar, Json<Value>) {
     if let Some(c) = jar.get(SESSION_COOKIE) {
         let token = c.value().to_string();
         let _ = sqlx::query("DELETE FROM sessions WHERE token = $1")
@@ -241,7 +239,10 @@ async fn change_password(
     Ok(Json(json!({ "ok": true })))
 }
 
-async fn list_tokens(user: AuthUser, State(state): State<AppState>) -> AppResult<Json<Vec<ApiToken>>> {
+async fn list_tokens(
+    user: AuthUser,
+    State(state): State<AppState>,
+) -> AppResult<Json<Vec<ApiToken>>> {
     let rows: Vec<ApiToken> = sqlx::query_as::<_, ApiToken>(
         "SELECT id, user_id, name, prefix, last_used_at, created_at \
          FROM api_tokens WHERE user_id = $1 ORDER BY created_at DESC",

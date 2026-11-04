@@ -4,7 +4,7 @@
 
 咸鱼图床（RangPic）最初是一个随机图片服务，现在已扩展为一座完整的自托管图床：多用户上传托管、WebP 缩略图、SHA-256 去重、**文件夹（相册）**、分享链接、可见性与定时过期、API Token、管理后台。其中**随机图**支持「某个公开文件夹」「某个用户的全部公开图片」「全站公开」三种范围，可作为博客背景图、头像、签名档等随机素材源。
 
-前端为纯手工编写的设计系统（暖色调中性色 + 翡翠绿点缀，暗色画廊优先，无 AI 模板感），后端资源经 `rust-embed` 编译进单个二进制，**一个可执行文件 + 一个 PostgreSQL** 即可上线。
+前端为纯手工编写的设计系统（暖色调中性色 + 翡翠绿点缀，暗色画廊优先，无 AI 模板感），后端资源经 `rust-embed` 编译进单个二进制。Docker 镜像里已经带上 PostgreSQL，对外只发布一个端口，数据库和上传文件放在同一个宿主机目录。
 
 ## 功能一览
 
@@ -32,14 +32,49 @@
 
 ### Docker（推荐）
 
+镜像：[`zhouwl/rangpic`](https://hub.docker.com/r/zhouwl/rangpic)。`0.2.0` 与 `latest` 是同一份镜像，包含 `linux/amd64` 和 `linux/arm64`。对外只发布一个端口。PostgreSQL 只监听容器内的 `127.0.0.1`。数据库和上传文件都在你挂载的目录里，重新拉取或重建镜像不会清掉它。
+
+```bash
+docker pull zhouwl/rangpic:latest
+docker run -d --name rangpic --restart unless-stopped \
+  -p 17777:17777 \
+  -v /var/lib/rangpic:/data \
+  -e ADMIN_USERNAME=admin \
+  -e ADMIN_PASSWORD=changeme \
+  zhouwl/rangpic:latest
+```
+
+用 compose 时不用克隆源码，把下面存成 `docker-compose.yaml` 后执行 `docker compose up -d`：
+
+```yaml
+services:
+  rangpic:
+    image: zhouwl/rangpic:0.2.0
+    restart: unless-stopped
+    ports:
+      - "${PORT:-17777}:17777"
+    environment:
+      ADMIN_USERNAME: admin
+      ADMIN_PASSWORD: changeme
+    volumes:
+      - ${DATA_DIR:-./rangpic-data}:/data
+```
+
+默认端口 `17777`，数据目录 `./rangpic-data`（里面是 `postgres/` 和 `storage/`）。换位置：
+
+```bash
+PORT=8080 DATA_DIR=/var/lib/rangpic docker compose up -d
+```
+
+打开 `http://localhost:17777`，用上面的管理员账号登录。要改账号或密码，改 `ADMIN_USERNAME` / `ADMIN_PASSWORD` 后再执行 `docker compose up -d`。只有这两项和上次启动不同时才会写回数据库，并清掉该账号的登录会话；compose 没改过的话，在网页里修改的密码会保留。
+
+从源码构建：
+
 ```bash
 git clone https://github.com/qqzhoufan/RangPic.git
 cd RangPic
-# 可先修改 docker-compose.yaml 里的 ADMIN_USERNAME / ADMIN_PASSWORD
 docker compose up --build -d
 ```
-
-打开 `http://localhost:17777`，用 compose 里设置的管理员账号登录（默认 `admin` / `changeme`，**请尽快在后台修改**）。
 
 ### 手动（Cargo）
 
@@ -66,7 +101,7 @@ cargo run --release
 | 变量 | 默认 | 说明 |
 | --- | --- | --- |
 | `DATABASE_URL` | — | **必填**。PostgreSQL 连接串 |
-| `ADMIN_USERNAME` / `ADMIN_PASSWORD` | `admin` / `adminpass` | **必填**。仅用于**首次启动**创建管理员账号；之后可在后台改密码 |
+| `ADMIN_USERNAME` / `ADMIN_PASSWORD` | 本地 `admin` / `adminpass`，Docker 镜像 `admin` / `changeme` | 部署管理员。首次启动创建；之后用户名或密码与上次启动不同时，会同步到该账号并清掉它的登录会话 |
 | `BIND_ADDR` | `0.0.0.0:17777` | 监听地址 |
 | `SITE_URL` | 空 | 站点公网地址（仅作初始值；**后台可配置，优先级更高**），用于生成绝对分享/嵌入链接 |
 | `STORAGE_DIR` | `storage` | 上传文件存储目录 |
@@ -150,9 +185,11 @@ src/
   storage.rs         Storage trait + 本地文件实现
   imaging.rs         格式识别、缩略图、SHA-256
   db.rs              SQLx 模型与列常量
+  netguard.rs        远程图片地址校验（拒绝内网与云元数据）
   routes/            public / auth / upload / images / albums / admin / pages
-migrations/          PostgreSQL 迁移（0001 schema · 0002 设置 · 0003 品牌）
+migrations/          PostgreSQL 迁移（0001 schema · 0002 设置 · 0003 品牌 · 0004 随机池）
 static/              前端（CSS / JS / HTML 页面，编译时嵌入二进制）
+docker/entrypoint.sh 容器启动：本机 PostgreSQL + RangPic
 data/image_urls.txt  随机图池种子数据
 ```
 

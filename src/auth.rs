@@ -132,7 +132,10 @@ pub struct AuthUser(pub User);
 
 impl FromRequestParts<AppState> for AuthUser {
     type Rejection = AppError;
-    async fn from_request_parts(parts: &mut Parts, state: &AppState) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &AppState,
+    ) -> Result<Self, Self::Rejection> {
         match resolve(parts, state).await {
             Some((user, _)) => Ok(AuthUser(user)),
             None => Err(AppError::Unauthorized),
@@ -146,7 +149,10 @@ pub struct MaybeAuthUser(pub Option<User>);
 
 impl FromRequestParts<AppState> for MaybeAuthUser {
     type Rejection = AppError;
-    async fn from_request_parts(parts: &mut Parts, state: &AppState) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &AppState,
+    ) -> Result<Self, Self::Rejection> {
         Ok(MaybeAuthUser(resolve(parts, state).await.map(|(u, _)| u)))
     }
 }
@@ -157,7 +163,10 @@ pub struct AdminUser(pub User);
 
 impl FromRequestParts<AppState> for AdminUser {
     type Rejection = AppError;
-    async fn from_request_parts(parts: &mut Parts, state: &AppState) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &AppState,
+    ) -> Result<Self, Self::Rejection> {
         match resolve(parts, state).await {
             Some((user, _)) if user.is_admin() => Ok(AdminUser(user)),
             Some(_) => Err(AppError::Forbidden),

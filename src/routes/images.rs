@@ -18,7 +18,10 @@ pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/api/my/images", get(list_my))
         .route("/api/my/images/{id}", patch(update_image))
-        .route("/api/my/images/{id}/delete", axum::routing::post(delete_image))
+        .route(
+            "/api/my/images/{id}/delete",
+            axum::routing::post(delete_image),
+        )
         .route("/api/my/stats", get(stats_my))
 }
 
@@ -90,7 +93,10 @@ async fn list_my(
 
     let mut qbc = QueryBuilder::new("SELECT COUNT(*) FROM images");
     apply_filters(&mut qbc, &f);
-    let total: i64 = qbc.build_query_scalar::<i64>().fetch_one(state.db()).await?;
+    let total: i64 = qbc
+        .build_query_scalar::<i64>()
+        .fetch_one(state.db())
+        .await?;
 
     let mut qbl = QueryBuilder::new(format!("SELECT {} FROM images", Image::COLUMNS).as_str());
     apply_filters(&mut qbl, &f);
@@ -104,7 +110,9 @@ async fn list_my(
         .iter()
         .map(|i| image_json(i, Some(user.0.username.clone()), &state))
         .collect();
-    Ok(Json(json!({ "items": items, "total": total, "limit": limit, "offset": offset })))
+    Ok(Json(
+        json!({ "items": items, "total": total, "limit": limit, "offset": offset }),
+    ))
 }
 
 async fn stats_my(user: AuthUser, State(state): State<AppState>) -> AppResult<Json<Value>> {
@@ -156,12 +164,22 @@ async fn update_image(
     if !can_modify(&img, &user.0) {
         return Err(AppError::Forbidden);
     }
+    if let Some(Some(aid)) = body.album_id {
+        let owner_id = img
+            .owner_id
+            .ok_or_else(|| AppError::BadRequest("无法为无主图片设置相册".into()))?;
+        super::ensure_album_owner(state.db(), aid, owner_id).await?;
+    }
 
     let mut qb = QueryBuilder::new("UPDATE images SET ");
     let mut started = false;
 
     if let Some(p) = body.privacy {
-        let p = if p.is_empty() { "public".to_string() } else { p };
+        let p = if p.is_empty() {
+            "public".to_string()
+        } else {
+            p
+        };
         match p.as_str() {
             "public" | "unlisted" | "private" => {}
             _ => return Err(AppError::BadRequest("无效的隐私设置".into())),
@@ -199,13 +217,21 @@ async fn update_image(
 
     if !started {
         let fresh = super::load_image(state.db(), id).await?;
-        return Ok(Json(image_json(&fresh, Some(user.0.username.clone()), &state)));
+        return Ok(Json(image_json(
+            &fresh,
+            Some(user.0.username.clone()),
+            &state,
+        )));
     }
 
     qb.push(" WHERE id = ").push_bind(id);
     qb.push(format!(" RETURNING {}", Image::COLUMNS));
     let updated: Image = qb.build_query_as::<Image>().fetch_one(state.db()).await?;
-    Ok(Json(image_json(&updated, Some(user.0.username.clone()), &state)))
+    Ok(Json(image_json(
+        &updated,
+        Some(user.0.username.clone()),
+        &state,
+    )))
 }
 
 async fn delete_image(
@@ -225,11 +251,12 @@ async fn delete_image(
         let _ = state.storage().delete(key).await;
     }
     if let Some(owner) = img.owner_id {
-        let _ = sqlx::query("UPDATE users SET used_bytes = GREATEST(used_bytes - $1, 0) WHERE id = $2")
-            .bind(img.size_bytes)
-            .bind(owner)
-            .execute(state.db())
-            .await;
+        let _ =
+            sqlx::query("UPDATE users SET used_bytes = GREATEST(used_bytes - $1, 0) WHERE id = $2")
+                .bind(img.size_bytes)
+                .bind(owner)
+                .execute(state.db())
+                .await;
     }
     let res = sqlx::query("DELETE FROM images WHERE id = $1")
         .bind(id)

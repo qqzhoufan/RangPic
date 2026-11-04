@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use axum::extract::{Path, Query, State};
-use axum::http::{header, HeaderValue};
+use axum::http::{header, HeaderMap, HeaderValue};
 use axum::response::Response;
 use axum::routing::get;
 use axum::Json;
@@ -14,7 +14,10 @@ use crate::db::{Image, User};
 use crate::error::{AppError, AppResult};
 use crate::state::AppState;
 
-use super::{base_url, bump_views, ensure_viewable, image_json, load_image, render_image, serve_thumb};
+use super::{
+    base_url, bump_views, ensure_viewable, if_none_match, image_json, load_image, not_modified,
+    render_image, serve_thumb,
+};
 
 pub fn routes() -> Router<AppState> {
     Router::new()
@@ -111,28 +114,58 @@ async fn resolve_user(db: &sqlx::PgPool, username: &str) -> Option<Uuid> {
         .flatten()
 }
 
+/// Pick uniformly via `rand_key` (indexed) instead of sorting the whole pool.
+/// A miss above the threshold wraps to the smallest key.
 async fn choose_random(
     db: &sqlx::PgPool,
     tag: String,
     scope: &RandomScope,
 ) -> AppResult<Option<Image>> {
+    let threshold: f64 = rand::random();
+    if let Some(img) = pick_random(db, &tag, scope, Some(threshold)).await? {
+        return Ok(Some(img));
+    }
+    pick_random(db, &tag, scope, None).await
+}
+
+async fn pick_random(
+    db: &sqlx::PgPool,
+    tag: &str,
+    scope: &RandomScope,
+    min_key: Option<f64>,
+) -> AppResult<Option<Image>> {
     let sql = format!(
         "SELECT {} FROM images \
          WHERE deleted_at IS NULL AND privacy = 'public' \
            AND (expires_at IS NULL OR expires_at > now()) \
+           AND (pool_excluded_until IS NULL OR pool_excluded_until <= now()) \
            AND ($1 = '' OR EXISTS (SELECT 1 FROM unnest(tags) AS t WHERE LOWER(t) LIKE LOWER('%' || $1 || '%'))) \
            AND ($2::uuid IS NULL OR owner_id = $2) \
            AND ($3::uuid IS NULL OR album_id = $3) \
-         ORDER BY RANDOM() LIMIT 1",
+           AND ($4::float8 IS NULL OR rand_key >= $4) \
+         ORDER BY rand_key LIMIT 1",
         Image::COLUMNS
     );
     let img = sqlx::query_as::<_, Image>(&sql)
         .bind(tag)
         .bind(scope.user_id)
         .bind(scope.album_id)
+        .bind(min_key)
         .fetch_optional(db)
         .await?;
     Ok(img)
+}
+
+async fn exclude_from_pool(db: &sqlx::PgPool, id: Uuid) {
+    if let Err(e) = sqlx::query(
+        "UPDATE images SET pool_excluded_until = now() + interval '30 minutes' WHERE id = $1",
+    )
+    .bind(id)
+    .execute(db)
+    .await
+    {
+        tracing::debug!(error = %e, %id, "暂时移出随机池失败");
+    }
 }
 
 /// `GET /api/random-image?tags=&album=&user=` — JSON metadata for a random image.
@@ -166,10 +199,7 @@ async fn random_image_proxy(
             None => break,
         };
         let tried = if img.is_local() {
-            match render_image(&state, &img, false).await {
-                Ok(r) => Ok(r),
-                Err(e) => Err(e),
-            }
+            render_image(&state, &img).await
         } else {
             super::fetch_remote_image(&state, &img.url).await
         };
@@ -180,10 +210,12 @@ async fn random_image_proxy(
                     header::CACHE_CONTROL,
                     HeaderValue::from_static("no-cache, no-store, must-revalidate"),
                 );
+                resp.headers_mut().remove(header::ETAG);
                 return Ok(resp);
             }
             Err(e) => {
                 tracing::debug!(image_id = %img.id, error = %e, "random pick failed, retrying");
+                exclude_from_pool(state.db(), img.id).await;
                 last_err = Some(e);
             }
         }
@@ -241,11 +273,17 @@ async fn explore(
     .bind(offset)
     .fetch_all(state.db())
     .await?;
+    let names = owner_names(state.db(), &images).await?;
     let items: Vec<Value> = images
         .iter()
-        .map(|i| image_json(i, None, &state))
+        .map(|i| {
+            let owner_name = i.owner_id.and_then(|id| names.get(&id).cloned());
+            image_json(i, owner_name, &state)
+        })
         .collect();
-    Ok(Json(json!({ "items": items, "total": total, "limit": limit, "offset": offset })))
+    Ok(Json(
+        json!({ "items": items, "total": total, "limit": limit, "offset": offset }),
+    ))
 }
 
 /// `GET /api/images/{id}` — public metadata (gated by privacy).
@@ -258,6 +296,21 @@ async fn get_image_public(
     ensure_viewable(&img, user.0.as_ref())?;
     let owner_name = owner_name(&state, &img).await;
     Ok(Json(image_json(&img, owner_name, &state)))
+}
+
+async fn owner_names(db: &sqlx::PgPool, images: &[Image]) -> AppResult<HashMap<Uuid, String>> {
+    let mut ids: Vec<Uuid> = images.iter().filter_map(|i| i.owner_id).collect();
+    ids.sort();
+    ids.dedup();
+    if ids.is_empty() {
+        return Ok(HashMap::new());
+    }
+    let rows: Vec<(Uuid, String)> =
+        sqlx::query_as("SELECT id, username FROM users WHERE id = ANY($1)")
+            .bind(&ids)
+            .fetch_all(db)
+            .await?;
+    Ok(rows.into_iter().collect())
 }
 
 async fn owner_name(state: &AppState, img: &Image) -> Option<String> {
@@ -274,27 +327,35 @@ async fn owner_name(state: &AppState, img: &Image) -> Option<String> {
 async fn serve_original(
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
+    headers: HeaderMap,
     user: MaybeAuthUser,
 ) -> AppResult<Response> {
     let img = load_image(state.db(), id).await?;
     ensure_viewable(&img, user.0.as_ref())?;
+    if if_none_match(&headers, &img) {
+        return Ok(not_modified(&img));
+    }
     bump_views(&state, img.id);
-    render_image(&state, &img, true).await
+    render_image(&state, &img).await
 }
 
 /// `GET /t/{id}` — thumbnail (same gating as original).
 async fn serve_thumb_route(
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
+    headers: HeaderMap,
     user: MaybeAuthUser,
 ) -> AppResult<Response> {
     let img = load_image(state.db(), id).await?;
     ensure_viewable(&img, user.0.as_ref())?;
+    if if_none_match(&headers, &img) {
+        return Ok(not_modified(&img));
+    }
     if let Ok(resp) = serve_thumb(&state, &img).await {
         return Ok(resp);
     }
     // No thumbnail (e.g. remote entry): fall back to the original / proxy.
-    render_image(&state, &img, true).await
+    render_image(&state, &img).await
 }
 
 #[derive(Serialize)]
@@ -324,10 +385,7 @@ async fn settings_map(db: &sqlx::PgPool) -> AppResult<HashMap<String, String>> {
     Ok(rows.into_iter().collect())
 }
 
-async fn site_api(
-    State(state): State<AppState>,
-    user: MaybeAuthUser,
-) -> AppResult<Json<Value>> {
+async fn site_api(State(state): State<AppState>, user: MaybeAuthUser) -> AppResult<Json<Value>> {
     let s = settings_map(state.db()).await?;
     let you = user.0.map(UserSummary::from);
     Ok(Json(json!({

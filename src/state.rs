@@ -24,7 +24,8 @@ impl AppState {
     pub fn new(config: Config, db: sqlx::PgPool, storage: Box<dyn Storage>) -> Self {
         let http = reqwest::Client::builder()
             .timeout(Duration::from_secs(30))
-            .redirect(reqwest::redirect::Policy::limited(5))
+            // Redirects are followed in `netguard`, which checks every hop.
+            .redirect(reqwest::redirect::Policy::none())
             .user_agent(concat!("RangPic/", env!("CARGO_PKG_VERSION")))
             .build()
             .expect("reqwest client");
@@ -37,7 +38,13 @@ impl AppState {
                 .to_string(),
         );
         Self {
-            inner: Arc::new(Inner { config, db, storage, http, base_url }),
+            inner: Arc::new(Inner {
+                config,
+                db,
+                storage,
+                http,
+                base_url,
+            }),
         }
     }
 
@@ -66,4 +73,3 @@ impl AppState {
         *self.inner.base_url.write().unwrap() = v;
     }
 }
-

@@ -21,24 +21,36 @@ COPY static ./static
 RUN touch src/main.rs && cargo build --release --locked
 
 # ---- runtime stage ----
+# Postgres is installed here and listens only on 127.0.0.1.
+# Operators publish one port and mount one directory at /data.
 FROM debian:bookworm-slim
 
+ENV DEBIAN_FRONTEND=noninteractive \
+    LANG=C.UTF-8
+
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates tini \
-    && rm -rf /var/lib/apt/lists/*
+    && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        postgresql-15 \
+        tini \
+    && rm -rf /var/lib/apt/lists/* \
+    && install -d -o postgres -g postgres /var/run/postgresql
 
 WORKDIR /app
 
-# The frontend is embedded in the binary; only the seed file is needed at runtime.
 COPY --from=builder /app/target/release/rangpic /app/rangpic
-COPY data ./data
+COPY data /app/data
+COPY docker/entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
 
 ENV BIND_ADDR=0.0.0.0:17777 \
-    STORAGE_DIR=/app/storage \
+    STORAGE_DIR=/data/storage \
     DATA_DIR=/app \
+    ADMIN_USERNAME=admin \
+    ADMIN_PASSWORD=changeme \
     RUST_LOG=info
 
 EXPOSE 17777
-VOLUME ["/app/storage"]
+VOLUME ["/data"]
 
-ENTRYPOINT ["tini", "--", "/app/rangpic"]
+ENTRYPOINT ["tini", "--", "/app/entrypoint.sh"]

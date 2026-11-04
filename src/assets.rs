@@ -22,8 +22,10 @@ pub fn static_file(path: &str) -> Response {
             );
             // hashed asset paths are immutable; HTML pages share this route but
             // re-render is cheap, so a short cache is fine.
-            resp.headers_mut()
-                .insert(header::CACHE_CONTROL, HeaderValue::from_static("public, max-age=300"));
+            resp.headers_mut().insert(
+                header::CACHE_CONTROL,
+                HeaderValue::from_static("public, max-age=300"),
+            );
             resp
         }
         None => (StatusCode::NOT_FOUND, "asset not found").into_response(),

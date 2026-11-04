@@ -32,7 +32,10 @@ struct AlbumListItem {
     cover_id: Option<Uuid>,
 }
 
-async fn list(user: AuthUser, State(state): State<AppState>) -> AppResult<Json<Vec<AlbumListItem>>> {
+async fn list(
+    user: AuthUser,
+    State(state): State<AppState>,
+) -> AppResult<Json<Vec<AlbumListItem>>> {
     let rows: Vec<AlbumListItem> = sqlx::query_as(
         "SELECT a.id, a.owner_id, a.name, a.slug, a.description, a.privacy::text AS privacy, \
                 a.created_at, \
@@ -199,7 +202,10 @@ async fn update(
     qb.push(" WHERE id = ").push_bind(id);
     qb.push(" AND owner_id = ").push_bind(user.0.id);
     qb.push(format!(" RETURNING {ALBUM_COLUMNS}"));
-    let album: Album = qb.build_query_as::<Album>().fetch_optional(state.db()).await?
+    let album: Album = qb
+        .build_query_as::<Album>()
+        .fetch_optional(state.db())
+        .await?
         .ok_or(AppError::NotFound)?;
     Ok(Json(album))
 }
