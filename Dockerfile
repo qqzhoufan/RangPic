@@ -8,17 +8,28 @@ FROM rust:1-bookworm AS builder
 
 WORKDIR /app
 
-# Cache dependencies separately from source changes.
+# Colored cargo output in CI logs. Does not affect the binary.
+ENV CARGO_TERM_COLOR=always
+
+# Cache dependencies in their own layer. GitHub Actions restores this layer
+# per architecture, so source-only changes do not rebuild the crate graph.
+# A failing dependency build must fail the image: swallowing it with `|| true`
+# would cache a broken layer and hide the error.
 COPY Cargo.toml Cargo.lock ./
 RUN mkdir -p src static/css static/js static/pages migrations \
     && echo 'fn main() {}' > src/main.rs \
-    && cargo build --release --locked || true
+    && cargo build --release --locked \
+    && rm -rf /usr/local/cargo/registry/src /usr/local/cargo/git
 
 # Real source + embedded assets (static/ and migrations/ are read at compile time).
+# Drop the dummy binary fingerprint so cargo cannot reuse `fn main() {}`.
 COPY src ./src
 COPY migrations ./migrations
 COPY static ./static
-RUN touch src/main.rs && cargo build --release --locked
+RUN rm -rf target/release/.fingerprint/rangpic-* \
+        target/release/deps/rangpic-* \
+        target/release/rangpic \
+    && cargo build --release --locked
 
 # ---- runtime stage ----
 # Postgres is installed here and listens only on 127.0.0.1.

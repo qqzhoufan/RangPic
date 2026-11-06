@@ -1,5 +1,11 @@
 target/
+.git
 git/
+.github
+cmd
+web
+go.mod
+go.sum
 storage/
 rangpic-data
 local_images/

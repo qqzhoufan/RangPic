@@ -76,6 +76,29 @@ cd RangPic
 docker compose up --build -d
 ```
 
+### 发布镜像（GitHub Actions）
+
+推送 `v` 开头的语义化版本 tag（例如 `v0.2.1`）后，[`.github/workflows/docker.yml`](.github/workflows/docker.yml) 会在 GitHub 托管的原生 runner 上分别构建 `linux/amd64`（`ubuntu-latest`）和 `linux/arm64`（`ubuntu-24.04-arm`），再合并成一份多架构 manifest，推到 Docker Hub：
+
+- `zhouwl/rangpic:0.2.1`（去掉前缀 `v`）
+- `zhouwl/rangpic:latest`
+
+```bash
+git tag v0.2.1
+git push origin v0.2.1
+```
+
+也可以在仓库的 Actions 页面手动运行 **Docker image**。选中的 ref 若是 `v*` tag，同样推送版本号和 `latest`；若是分支（例如 `master`），只推送 `latest`。
+
+推送到 `master`，或打开针对 `master` 的 Pull Request，只会把两个架构都构建一遍，不会登录、也不会推送。用来在发版前发现编译失败。
+
+仓库 Settings → Secrets and variables → Actions 里需要这两个 secrets（只放在 GitHub，不要写进仓库或镜像）：
+
+| Secret | 说明 |
+| --- | --- |
+| `DOCKERHUB_USERNAME` | Docker Hub 用户名 |
+| `DOCKERHUB_TOKEN` | Docker Hub Access Token，需要有推送 `zhouwl/rangpic` 的权限 |
+
 ### 手动（Cargo）
 
 需要 Rust **1.88+**（依赖的 `image`/`time` 等 MSRV 为 1.88，`icu_*` 为 1.86）与 PostgreSQL。
